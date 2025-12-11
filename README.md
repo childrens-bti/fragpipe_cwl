@@ -1,118 +1,155 @@
- # template for developing cwl workflows
+# FragPipe CWL Workflows
 
-This repository contains CWL tools and workflows for XXX. The workflow will be packaged and tested on an EC2 instance:
+This directory contains Common Workflow Language (CWL) implementations of the FragPipe proteomics analysis pipeline.
 
-## Overview of Workflows (Example)
-
-### `merge-rsem-gene.cwl`
-- **Input:** `*.rsem.genes.results.gz`
-- **Output:**  
-  - `gene-expression-rsem-fpkm.all.rds`
-  - `gene-expression-rsem-tpm.all.rds`
-  - `gene-counts-rsem-expected_count.all.rds`
-
-### `prep.sh`
-- **Purpose:** Orchestrates all the above workflows, handles S3 mounting, manifest creation, reference file download.
-
-### `main_workflow.cwl`
-- **Purpose:** Main workflow wrapper.
-
-## Repository Structure
+## Structure
 
 ```
-template_cwl
-├── tools/                   # CWL CommandLineTool definitions
-├── scripts/                 # R/python scripts for the merge tools   
-├── workflows/               # CWL workflows/subworkflows
-├── data/                    # Input data to run on
-├── test/                    # Test scripts and expected outputs
-├── manifests/               # intermediate manifest files 
-├── params/                  # workflow input parameter yaml files
-├── outputs/                 # workflow output files
-├── logs/                    # running log files
-├── envs/                    # Conda environments with tools for local testing
-├── README.md
-├── LICENSE
-└── .gitignore
+fragpipe_cwl/
+├── Dockerfile                         # Container with FragPipe and dependencies
+├── run_fragpipe.sh                   # Original bash script (reference)
+├── fragpipe-local.cwl                # Main workflow for local execution with SBFS mounting
+├── fragpipe-cavatica.cwl             # Main workflow for Cavatica platform execution
+├── tools/                            # CWL CommandLineTool definitions
+│   ├── philosopher-database.cwl      # Add decoys/contaminants to FASTA
+│   ├── filter-canonical-peptides.cwl # Filter canonical peptides by gene symbols
+│   ├── fragpipe-headless.cwl         # Main FragPipe execution
+│   └── sbfs-mount-copy.cwl           # Mount Cavatica project (local only)
+└── workflows/                        # Additional CWL sub-workflows (if any)
 ```
+
+## Workflows
+
+### 1. Local Execution Workflow (`fragpipe-local.cwl`)
+
+Use this workflow for **local testing** when you need to mount Cavatica projects via SBFS to access large mzML file collections.
+
+**Steps:**
+1. Mount Cavatica project using SBFS
+2. Copy and unzip mzML files
+3. Prepare FASTA database (add decoys/contaminants)
+4. Filter canonical peptides
+5. Run FragPipe headless
+
+**Required Inputs:**
+- `query_fasta`: Custom FASTA file
+- `uniprot_canonical_fasta`: UniProt canonical FASTA (gzipped)
+- `workflow_file`: FragPipe workflow configuration
+- `manifest_file`: FragPipe manifest file
+- `cohort`: "hope" or "cptac"
+- `run_subset`: true/false (optional, default: false)
+
+### 2. Cavatica Platform Workflow (`fragpipe-cavatica.cwl`)
+
+Use this workflow when **running directly on Cavatica platform** where files are already accessible.
+
+**Steps:**
+1. Prepare FASTA database (add decoys/contaminants)
+2. Filter canonical peptides
+3. Run FragPipe headless
+
+**Required Inputs:**
+- `query_fasta`: Custom FASTA file
+- `uniprot_canonical_fasta`: UniProt canonical FASTA (gzipped)
+- `workflow_file`: FragPipe workflow configuration
+- `manifest_file`: FragPipe manifest file
+- `mzml_files`: Array of mzML files from Cavatica storage
 
 ## Usage
 
-### Prerequisites
-
-- AWS CLI with SSO configuration follow [these steps](https://childrens-bti.github.io/bti-bfx-docs/aws/), make sure you have permission to the S3 buckets hosting harmonization results.
-- `jq`, `curl`, `cwltool`, and `mount-s3` installed
-- Access to the relevant S3 bucket with harmonized data
-
-#### FUSE Configuration for S3 Mounts
-
-To allow Docker and other users to access your S3 mount, you must enable the `allow_other` option for FUSE.  
-**Edit `/etc/fuse.conf` and ensure the following line is present and uncommented:**
+### Local Execution
 
 ```bash
-sudo vim /etc/fuse.conf
+cwl-runner workflows/fragpipe-local.cwl inputs-local.yml
 ```
-Uncomment or add:
+
+Example `inputs-local.yml`:
+```yaml
+query_fasta:
+  class: File
+  path: input/custom.fasta
+uniprot_canonical_fasta:
+  class: File
+  path: refs/UP000005640_9606.fasta.gz
+workflow_file:
+  class: File
+  path: input/PDC000180customworkflow.workflow
+manifest_file:
+  class: File
+  path: input/PDC000180filesmanifest.fp-manifest
+cohort: "cptac"
+run_subset: false
 ```
-user_allow_other
-```
-Save and exit the editor.
 
-This is required so that `mount-s3 --allow-other ...` works and Docker can access the mounted S3 bucket.
-
-### Setup Conda Environment
-
-First, create and activate the conda environment with all required tools:
+### Cavatica Platform Execution
 
 ```bash
-conda env create -f envs/cwl_env.yml
-conda activate cwl_env
+cwl-runner workflows/fragpipe-cavatica.cwl inputs-cavatica.yml
 ```
 
-### Run Locally on EC2
+Example `inputs-cavatica.yml`:
+```yaml
+query_fasta:
+  class: File
+  path: input/custom.fasta
+uniprot_canonical_fasta:
+  class: File
+  path: refs/UP000005640_9606.fasta.gz
+workflow_file:
+  class: File
+  path: input/PDC000180customworkflow.workflow
+manifest_file:
+  class: File
+  path: input/PDC000180filesmanifest.fp-manifest
+mzml_files:
+  - class: File
+    path: /sbgenomics/project-files/sample1.mzML
+  - class: File
+    path: /sbgenomics/project-files/sample2.mzML
+```
 
-After activating the environment, run the main workflow script:
+## Building the Docker Image
+
 ```bash
-bash prep.sh -h
-Usage: prep.sh [BUCKET] [BUCKET_PREFIX] [OUT_DIR] [LOG_DIR]
+# Build locally
+docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest .
 
-Arguments:
-  BUCKET         S3 bucket name (example: bti-private-us-east-1-prd-gilbert-lab)
-  BUCKET_PREFIX  S3 prefix/path (example: harmonized/MTAP/)
-  OUT_DIR        Output directory (default: outputs/merged)
-  LOG_DIR        Log directory (default: logs)
-```
-Run:
-```bash
-bash prep.sh bti-private-us-east-1-prd-gilbert-lab harmonized/MTAP/ outputs/merged logs
-
-cwltool --outdir outputs/merged/ rnaseq_merge_workflow.cwl params/rnaseq_merge_workflow_params.yml > logs/rnaseq_merge_workflow.log 2>&1
+# Push to registry
+docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest
 ```
 
-### Run on Cavatica
+## Tool Descriptions
 
-Copy the app and the references to your project and run it on Cavatica platform.
+### philosopher-database.cwl
+Initializes a Philosopher workspace and adds decoys/contaminants from UniProt canonical database to the custom FASTA file.
 
+### filter-canonical-peptides.cwl
+Extracts gene symbols from the custom FASTA and filters out canonical peptides annotated to those genes.
 
-### Example Parameter Files
+### fragpipe-headless.cwl
+Runs FragPipe in headless mode with specified workflow, manifest, and processed FASTA database.
 
-See the [`params/`](params/) directory for example YAML parameter files for each workflow.
+### sbfs-mount-copy.cwl
+Mounts a Cavatica project using SBFS, copies mzML files, and unzips them. **Local execution only**.
 
-## Inputs
+## Key Differences Between Workflows
 
-- Input files (e.g., RSEM, HTSeq, STAR counts)
-- Reference files:
-- Example input data:  
+| Feature | Local Workflow | Cavatica Workflow |
+|---------|----------------|-------------------|
+| SBFS Mounting | ✅ Yes | ❌ No |
+| mzML Input | Via mounted filesystem | Direct file inputs |
+| Use Case | Local testing/development | Production on Cavatica |
+| Network Access | Required (for SBFS) | Not required |
 
-## Outputs (example)
-- Merged gene expression and isoform expression tables
-- Merged and collapsed RNA-Seq quantification matrices
-- Merged fusion and splicing event tables
+## Requirements
 
-## Acknowledgments
+- CWL runner (cwltool, toil, arvados-cwl-runner, etc.)
+- Docker (for local execution)
+- SBFS installed (for local workflow only)
+- Cavatica account and credentials (for local workflow)
 
-Workflow based on previous work: 
+## Notes
 
-## Maintainer
-
-Chao Di ([@chaodi51](https://github.com/chaodi51))
+- The Docker image includes FragPipe 23.1 with all required tools
+- JAR files (MSFragger, IonQuant, diaTracer) must be copied during Docker build
+- Resource requirements are specified as hints for Cavatica platform optimization
