@@ -22,6 +22,7 @@ RUN apt-get -y update --fix-missing \
         vim \
         tar \
         fuse \
+        man-db \
         openjdk-17-jdk \
         dotnet-runtime-6.0 \
         build-essential \
@@ -94,9 +95,9 @@ ENV FRAGPIPE_TOOLS="/fragpipe_bin/fragpipe-23.1/tools"
 ENV PATH="${FRAGPIPE_BIN}/bin:${FRAGPIPE_TOOLS}/Philosopher:${PATH}"
 
 # Copy required JAR files (uncomment and provide at build time)
-COPY MSFragger-4.3.jar ${FRAGPIPE_TOOLS}/MSFragger-4.3.jar 
-COPY diaTracer-1.3.3.jar ${FRAGPIPE_TOOLS}/diaTracer-1.3.3.jar
-COPY IonQuant-1.11.11.jar ${FRAGPIPE_TOOLS}/IonQuant-1.11.11.jar
+COPY tools/MSFragger-4.3.jar ${FRAGPIPE_TOOLS}/MSFragger-4.3.jar 
+COPY tools/diaTracer-1.3.3.jar ${FRAGPIPE_TOOLS}/diaTracer-1.3.3.jar
+COPY tools/IonQuant-1.11.11.jar ${FRAGPIPE_TOOLS}/IonQuant-1.11.11.jar
 
 # Copy workflow scripts
 COPY scripts/ /scripts/
