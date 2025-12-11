@@ -1,0 +1,27 @@
+name: cwl_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # CWL tools
+  - cwltool
+  - schema-salad
+
+  # General tools
+  - python=3.12
+  - git
+  - wget
+  - pip
+  - jq
+  - curl
+  - awscli
+
+  # R setup
+  - r-base=4.4
+  - r-essentials
+  - r-biocmanager
+
+  # mount-s3 (install via pip)
+  - pip:
+      - mount-s3

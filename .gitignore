@@ -1,0 +1,49 @@
+# Editor and system files
+.DS_Store
+*.swp
+*.bak
+*.log
+*.tmp
+-*
+
+# Python cache (if any helper scripts are used)
+__pycache__/
+*.py[cod]
+
+# CWL job and temp files
+*.cwl.json
+*.inputs.json
+*.outputs.json
+**/*.sh
+!prep.sh
+*.err
+*.out
+tmp/
+
+# Output and result files
+*.bam
+*.bai
+*.vcf
+*.gz
+*.zip
+outputs/*
+!outputs/.gitkeep
+params/*
+!params/.gitkeep
+test/
+logs/*
+!logs/.gitkeep
+sbg-hints/* 
+!sbg-hints/.gitkeep
+workflows/*
+!workflows/.gitkeep
+tools/*
+!tools/.gitkeep
+scripts/*
+!scripts/.gitkeep
+# harmonized data
+data/*
+!data/.gitkeep
+# manifest files
+manifests/*
+!manifests/.gitkeep
