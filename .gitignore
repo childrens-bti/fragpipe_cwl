@@ -47,3 +47,8 @@ data/*
 # manifest files
 manifests/*
 !manifests/.gitkeep
+
+# ignore fragpipe tools (only for initial docker build)
+tools/MSFragger-4.3.jar
+tools/diaTracer-1.3.3.jar
+tools/IonQuant-1.11.11.jar 
