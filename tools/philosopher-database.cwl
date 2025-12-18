@@ -1,0 +1,50 @@
+cwlVersion: v1.2
+class: CommandLineTool
+
+label: Philosopher Database Preparation
+doc: |
+  Add decoys and contaminants to a custom FASTA file using Philosopher.
+  This tool initializes a Philosopher workspace, adds decoys from a canonical
+  UniProt FASTA and contaminants to the query FASTA file.
+
+baseCommand: [bash, /opt/impact_trial/scripts/philosopher-database.sh]
+
+requirements:
+  InlineJavascriptRequirement: {}
+  DockerRequirement:
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest"
+  InitialWorkDirRequirement:
+    listing:
+      - $(inputs.query_fasta)
+      - $(inputs.uniprot_canonical_fasta)
+      - $(inputs.db_script)
+
+inputs:
+  query_fasta:
+    type: File
+    doc: Custom FASTA file containing query peptides
+    inputBinding:
+      position: 1
+
+  uniprot_canonical_fasta:
+    type: File
+    doc: UniProt canonical FASTA file (gzipped), e.g., UP000005640_9606.fasta.gz
+    inputBinding:
+      position: 2
+
+  db_script:
+    type: File
+    doc: Shell script implementing database preparation
+    default:
+      class: File
+      location: ../scripts/philosopher-database.sh
+
+outputs:
+  fasta_with_decoys:
+    type: File
+    outputBinding:
+      glob: "decoys-contam-custom.fasta.fas"
+    doc: FASTA file with added decoys and contaminants
+
+stdout: philosopher-database.log
+stderr: philosopher-database.err

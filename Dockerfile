@@ -1,13 +1,9 @@
-FROM ubuntu:22.04
+FROM rocker/tidyverse:4.4.0
 LABEL description="FragPipe proteomics pipeline container for CWL workflows"
 
-# Prevent interactive prompts during package installation
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
+WORKDIR /rocker-build
 
-WORKDIR /build
-
-# Update and install base dependencies
+# Update and install all dependencies in one layer
 RUN apt-get -y update --fix-missing \
     && apt-get -y upgrade \
     && apt-get -y install --no-install-recommends \
@@ -19,7 +15,6 @@ RUN apt-get -y update --fix-missing \
         unzip \
         gzip \
         gawk \
-        vim \
         tar \
         fuse \
         man-db \
@@ -42,7 +37,7 @@ RUN apt-get -y update --fix-missing \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CAVATICA SBFS (optional - for mounting Seven Bridges filesystems)
+# Install CAVATICA SBFS
 RUN curl https://igor.sbgenomics.com/downloads/sbfs/install.sh -sSf | sh
 
 # Install Mono
@@ -67,13 +62,13 @@ RUN cd /usr/src \
     && cd /usr/src \
     && rm -rf Python-3.11.0.tgz Python-3.11.0
 
-# Setup Python symlinks and install packages
-RUN ln -sf /usr/local/bin/python3.11 /usr/local/bin/python3 \
-    && ln -sf /usr/local/bin/python3.11 /usr/local/bin/python \
-    && python3 -m pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir \
-        git+https://github.com/Nesvilab/easypqp.git@master \
-        lxml
+# Setup the default python commands to use Python 3.11
+RUN ln -s /usr/local/bin/python3.11 /usr/local/bin/python3 && \
+    ln -s /usr/local/bin/python3.11 /usr/local/bin/python
+RUN python3 -m pip install --upgrade pip
+RUN pip uninstall easypqp \
+    && pip install git+https://github.com/grosenberger/easypqp.git@master \
+    && pip install lxml
 
 # Create FragPipe directory structure
 RUN mkdir -p /fragpipe_bin/tools /fragpipe_bin/tmp /fragpipe_bin/refs \
@@ -81,24 +76,23 @@ RUN mkdir -p /fragpipe_bin/tools /fragpipe_bin/tmp /fragpipe_bin/refs \
 
 WORKDIR /fragpipe_bin
 
-# Download and install FragPipe 23.1
-RUN wget https://github.com/Nesvilab/FragPipe/releases/download/23.1/FragPipe-23.1-linux.zip \
-    && unzip FragPipe-23.1-linux.zip \
-    && rm FragPipe-23.1-linux.zip \
+# Download and install FragPipe 22.0
+RUN wget https://github.com/Nesvilab/FragPipe/releases/download/22.0/FragPipe-22.0.zip -P fragPipe-22.0 \
+    && unzip fragPipe-22.0/FragPipe-22.0.zip -d fragPipe-22.0 \
     && chmod -R 777 /fragpipe_bin
 
 # Set environment variables
 ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 RUN export JAVA_HOME
-ENV FRAGPIPE_BIN="/fragpipe_bin/fragpipe-23.1"
-ENV FRAGPIPE_TOOLS="/fragpipe_bin/fragpipe-23.1/tools"
+ENV FRAGPIPE_BIN="/fragpipe_bin/fragPipe-22.0/fragpipe"
+ENV FRAGPIPE_TOOLS="/fragpipe_bin/fragPipe-22.0/fragpipe/tools"
 ENV PATH="${FRAGPIPE_BIN}/bin:${FRAGPIPE_TOOLS}/Philosopher:${PATH}"
 
-# Copy required JAR files (uncomment and provide at build time)
-COPY tools/MSFragger-4.3.jar ${FRAGPIPE_TOOLS}/MSFragger-4.3.jar 
-COPY tools/diaTracer-1.3.3.jar ${FRAGPIPE_TOOLS}/diaTracer-1.3.3.jar
-COPY tools/IonQuant-1.11.11.jar ${FRAGPIPE_TOOLS}/IonQuant-1.11.11.jar
+# Copy required JAR files
+COPY tools/MSFragger-4.1.jar ${FRAGPIPE_TOOLS}/MSFragger-4.1.jar 
+COPY tools/diaTracer-1.1.5.jar ${FRAGPIPE_TOOLS}/diaTracer-1.1.5.jar 
+COPY tools/IonQuant-1.10.27.jar ${FRAGPIPE_TOOLS}/IonQuant-1.10.27.jar
 
 # Copy workflow scripts
-COPY scripts/ /scripts/
-RUN chmod -R +rx /scripts/ && chown -R 1000:1000 /scripts/
+COPY scripts/  /opt/impact_trial/scripts/
+RUN chmod -R +rx /opt/impact_trial/scripts/ && chown -R 1000:1000 /opt/impact_trial/scripts/
