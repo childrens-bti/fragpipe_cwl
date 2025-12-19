@@ -84,7 +84,7 @@ RUN wget https://github.com/Nesvilab/FragPipe/releases/download/22.0/FragPipe-22
 # Set environment variables
 ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 RUN export JAVA_HOME
-ENV FRAGPIPE_BIN="/fragpipe_bin/fragPipe-22.0/fragpipe"
+ENV FRAGPIPE_BIN="/fragpipe_bin/fragPipe-22.0/fragpipe/bin"
 ENV FRAGPIPE_TOOLS="/fragpipe_bin/fragPipe-22.0/fragpipe/tools"
 ENV PATH="${FRAGPIPE_BIN}/bin:${FRAGPIPE_TOOLS}/Philosopher:${PATH}"
 
