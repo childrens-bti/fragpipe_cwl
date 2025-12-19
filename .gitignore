@@ -47,8 +47,8 @@ manifests/*
 tools/*.jar
 
 # Ignore root shell scripts
-run_data.sh
 run_fragpipe.sh
+run_data.sh
 
 # ignore cwl local run temp files
 .cwl-tmp/

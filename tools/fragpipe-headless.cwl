@@ -55,26 +55,80 @@ inputs:
     doc: Directory containing decompressed mzML files
 
 outputs:
+  results_directory:
+    type: Directory
+    outputBinding:
+      glob: "results"
+    doc: FragPipe output directory containing all results
+
   combined_protein:
     type: File?
     outputBinding:
-      glob: "protein.tsv"
+      glob: "results/combined_protein.tsv"
     doc: Combined protein quantification results
 
   combined_peptide:
     type: File?
     outputBinding:
-      glob: "peptide.tsv"
+      glob: "results/combined_peptide.tsv"
     doc: Combined peptide quantification results
+
+  combined_modified_peptide:
+    type: File?
+    outputBinding:
+      glob: "results/combined_modified_peptide.tsv"
+    doc: Combined modified peptide quantification results
 
   combined_ion:
     type: File?
     outputBinding:
-      glob: "ion.tsv"
+      glob: "results/combined_ion.tsv"
     doc: Combined ion quantification results
+
+  tmt_report:
+    type: Directory?
+    outputBinding:
+      glob: "results/tmt-report"
+    doc: TMT reporter ion quantification results
+
+  workflow_file_out:
+    type: File?
+    outputBinding:
+      glob: "results/fragpipe.workflow"
+    doc: FragPipe workflow configuration used
+
+  fragger_params:
+    type: File?
+    outputBinding:
+      glob: "results/fragger.params"
+    doc: MSFragger parameter file
+
+  tmt_integrator_conf:
+    type: File?
+    outputBinding:
+      glob: "results/tmt-integrator-conf.yml"
+    doc: TMT-Integrator configuration file
+
+  experiment_annotation:
+    type: File?
+    outputBinding:
+      glob: "results/experiment_annotation.tsv"
+    doc: Experiment annotation file
+
+  sdrf_file:
+    type: File?
+    outputBinding:
+      glob: "results/sdrf.tsv"
+    doc: SDRF metadata file
+
+  manifest_file_out:
+    type: File?
+    outputBinding:
+      glob: "results/fragpipe-files.fp-manifest"
+    doc: FragPipe manifest file used
 
   log_file:
     type: File?
     outputBinding:
-      glob: "log_*.txt"
+      glob: "results/log_*.txt"
     doc: FragPipe execution log file

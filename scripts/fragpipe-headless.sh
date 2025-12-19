@@ -32,5 +32,5 @@ sed "s|database.db-path=.*|database.db-path=$FASTA_ABS|g" "$WORKFLOW_FILE" > "$W
   --headless \
   --workflow "$WORKFLOW_MODIFIED" \
   --manifest "$MANIFEST_FILE" \
-  --workdir "$(pwd)" \
+  --workdir "$(pwd)/results" \
   --config-tools-folder "$FRAGPIPE_TOOLS"

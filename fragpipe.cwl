@@ -42,6 +42,11 @@ inputs:
     doc: If true, only process first experiment (01C prefix)
 
 outputs:
+  results_directory:
+    type: Directory
+    outputSource: run_fragpipe/results_directory
+    doc: FragPipe output directory containing all results
+
   combined_protein:
     type: File?
     outputSource: run_fragpipe/combined_protein
@@ -51,11 +56,56 @@ outputs:
     type: File?
     outputSource: run_fragpipe/combined_peptide
     doc: Combined peptide quantification results
+
+  combined_modified_peptide:
+    type: File?
+    outputSource: run_fragpipe/combined_modified_peptide
+    doc: Combined modified peptide quantification results
     
   combined_ion:
     type: File?
     outputSource: run_fragpipe/combined_ion
     doc: Combined ion quantification results
+
+  tmt_report:
+    type: Directory?
+    outputSource: run_fragpipe/tmt_report
+    doc: TMT reporter ion quantification results
+
+  workflow_file_out:
+    type: File?
+    outputSource: run_fragpipe/workflow_file_out
+    doc: FragPipe workflow configuration used
+
+  fragger_params:
+    type: File?
+    outputSource: run_fragpipe/fragger_params
+    doc: MSFragger parameter file
+
+  tmt_integrator_conf:
+    type: File?
+    outputSource: run_fragpipe/tmt_integrator_conf
+    doc: TMT-Integrator configuration file
+
+  experiment_annotation:
+    type: File?
+    outputSource: run_fragpipe/experiment_annotation
+    doc: Experiment annotation file
+
+  sdrf_file:
+    type: File?
+    outputSource: run_fragpipe/sdrf_file
+    doc: SDRF metadata file
+
+  manifest_file_out:
+    type: File?
+    outputSource: run_fragpipe/manifest_file_out
+    doc: FragPipe manifest file used
+
+  log_file:
+    type: File?
+    outputSource: run_fragpipe/log_file
+    doc: FragPipe execution log file
 
 steps:
   # Step 1: Gunzip mzML files from mounted Cavatica directory
@@ -92,7 +142,20 @@ steps:
       workflow_file: workflow_file
       manifest_file: gunzip_mzml/mzml_manifest
       mzml_directory: gunzip_mzml/mzml_directory
-    out: [combined_protein, combined_peptide, combined_ion, log_file]
+    out:
+      - results_directory
+      - combined_protein
+      - combined_peptide
+      - combined_modified_peptide
+      - combined_ion
+      - tmt_report
+      - workflow_file_out
+      - fragger_params
+      - tmt_integrator_conf
+      - experiment_annotation
+      - sdrf_file
+      - manifest_file_out
+      - log_file
 
 $namespaces:
   sbg: "https://sevenbridges.com/"
