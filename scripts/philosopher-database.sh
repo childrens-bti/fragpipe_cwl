@@ -5,12 +5,14 @@ set -o pipefail
 QUERY_FASTA="$1"
 UNIPROT_FASTA="$2"
 
+PHIL_BIN="/fragpipe_bin/fragPipe-22.0/fragpipe/tools/Philosopher/philosopher-v5.1.1"
+
 # Initialize Philosopher workspace
-philosopher workspace --init
+"$PHIL_BIN" workspace --init
 
 # Add decoys and contaminants to the custom FASTA file
 gunzip -c "$UNIPROT_FASTA" | \
-  philosopher database \
+  "$PHIL_BIN" database \
     --custom "$QUERY_FASTA" \
     --add /dev/stdin \
     --contam
@@ -27,4 +29,4 @@ fi
 cp "$output_file" decoys-contam-custom.fasta.fas
 
 # Clean workspace
-philosopher workspace --clean
+"$PHIL_BIN" workspace --clean
