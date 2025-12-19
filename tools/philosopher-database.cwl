@@ -17,7 +17,6 @@ requirements:
     listing:
       - $(inputs.query_fasta)
       - $(inputs.uniprot_canonical_fasta)
-      - $(inputs.db_script)
 
 inputs:
   query_fasta:
@@ -32,19 +31,9 @@ inputs:
     inputBinding:
       position: 2
 
-  db_script:
-    type: File
-    doc: Shell script implementing database preparation
-    default:
-      class: File
-      location: ../scripts/philosopher-database.sh
-
 outputs:
   fasta_with_decoys:
     type: File
     outputBinding:
       glob: "decoys-contam-custom.fasta.fas"
     doc: FASTA file with added decoys and contaminants
-
-stdout: philosopher-database.log
-stderr: philosopher-database.err

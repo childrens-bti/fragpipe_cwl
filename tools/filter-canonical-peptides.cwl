@@ -17,7 +17,6 @@ requirements:
     listing:
       - $(inputs.query_fasta)
       - $(inputs.fasta_with_decoys)
-      - $(inputs.filter_script)
 
 inputs:
   query_fasta:
@@ -32,13 +31,6 @@ inputs:
     inputBinding:
       position: 2
 
-  filter_script:
-    type: File
-    doc: Shell script implementing canonical peptide filtering
-    default:
-      class: File
-      location: ../scripts/filter-canonical-peptides.sh
-
 outputs:
   filtered_fasta:
     type: File
@@ -51,6 +43,3 @@ outputs:
     outputBinding:
       glob: "gene_symbols.txt"
     doc: List of gene symbols extracted from custom FASTA
-
-stdout: filter-canonical.log
-stderr: filter-canonical.err

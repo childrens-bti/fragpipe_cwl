@@ -13,18 +13,23 @@ requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
     dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest"
+  InplaceUpdateRequirement:
+    inplaceUpdate: true
+  EnvVarRequirement:
+    envDef:
+      HOME: $(runtime.outdir)
+      XDG_CONFIG_HOME: $(runtime.outdir)/.config
+      XDG_CACHE_HOME: $(runtime.outdir)/.cache
+      JAVA_TOOL_OPTIONS: -Duser.home=$(runtime.outdir)
+
   InitialWorkDirRequirement:
     listing:
       - $(inputs.filtered_fasta)
       - $(inputs.workflow_file)
       - $(inputs.manifest_file)
-      - $(inputs.fragpipe_script)
-      - entryname: mzml_files
+      - entryname: $(inputs.mzml_directory.basename)
         writable: true
-        entry: |
-          ${
-            return inputs.mzml_files ? inputs.mzml_files : null;
-          }
+        entry: $(inputs.mzml_directory)
 
 inputs:
   filtered_fasta:
@@ -45,47 +50,31 @@ inputs:
     inputBinding:
       position: 3
 
-  mzml_files:
-    type: File[]?
-    doc: Optional array of mzML files (for Cavatica platform execution)
-
-  fragpipe_script:
-    type: File
-    doc: Shell script implementing FragPipe headless execution
-    default:
-      class: File
-      location: ../scripts/fragpipe-headless.sh
+  mzml_directory:
+    type: Directory
+    doc: Directory containing decompressed mzML files
 
 outputs:
-  results_directory:
-    type: Directory
-    outputBinding:
-      glob: "results"
-    doc: FragPipe output directory containing all results
-
   combined_protein:
     type: File?
     outputBinding:
-      glob: "results/combined_protein.tsv"
+      glob: "protein.tsv"
     doc: Combined protein quantification results
 
   combined_peptide:
     type: File?
     outputBinding:
-      glob: "results/combined_peptide.tsv"
+      glob: "peptide.tsv"
     doc: Combined peptide quantification results
 
   combined_ion:
     type: File?
     outputBinding:
-      glob: "results/combined_ion.tsv"
+      glob: "ion.tsv"
     doc: Combined ion quantification results
 
   log_file:
     type: File?
     outputBinding:
-      glob: "results/log_*.txt"
+      glob: "log_*.txt"
     doc: FragPipe execution log file
-
-stdout: fragpipe.log
-stderr: fragpipe.err
