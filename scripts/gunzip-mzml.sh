@@ -58,9 +58,10 @@ fi
 # mzml_files.txt: simple list of paths
 find "$OUT_DIR" -name "*.mzML" | sort > mzml_files.txt
 
-# mzml_manifest.fp-manifest: FragPipe format (path + tabs + DDA)
+# mzml_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
 while IFS= read -r filepath; do
-  echo -e "${filepath}\t\t\tDDA"
+  basename=$(basename "$filepath" .mzML)
+  echo -e "${filepath}\t${basename}\t\tDDA"
 done < mzml_files.txt > mzml_manifest.fp-manifest
 
 touch mzml_files.txt mzml_manifest.fp-manifest
