@@ -1,57 +1,47 @@
 cwlVersion: v1.2
 class: Workflow
 
-label: FragPipe Proteomics Pipeline - Cavatica Platform
+label: FragPipe Proteomics Pipeline
 doc: |
-  Complete FragPipe proteomics analysis pipeline for CAVATICA PLATFORM execution.
-  This workflow skips SBFS mounting and expects mzML files to be provided
-  as direct inputs from the Cavatica platform storage.
-  
-  Use this workflow when running directly on Cavatica where files are
-  already accessible without mounting.
+  Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
+  This workflow expects a mounted Cavatica directory containing gzipped mzML files,
+  performs FASTA preparation with decoys/contaminants, and runs FragPipe analysis.
 
 requirements:
   InlineJavascriptRequirement: {}
   StepInputExpressionRequirement: {}
   SubworkflowFeatureRequirement: {}
-  MultipleInputFeatureRequirement: {}
 
 inputs:
   # FASTA inputs
   query_fasta:
     type: File
-    doc: Custom FASTA file containing query peptides
-    sbg:fileTypes: "FASTA, FA, FAS"
+    doc: Custom FASTA file containing query peptides (e.g., data/custom.fasta)
     
   uniprot_canonical_fasta:
     type: File
-    doc: UniProt canonical FASTA file (gzipped), e.g., UP000005640_9606.fasta.gz
-    sbg:fileTypes: "FASTA.GZ, FA.GZ, FAS.GZ"
+    doc: UniProt canonical FASTA file (e.g., data/reference/UP000005640_9606.fasta.gz)
     
   # FragPipe inputs
   workflow_file:
     type: File
-    doc: FragPipe workflow configuration file
-    sbg:fileTypes: "WORKFLOW"
+    doc: FragPipe workflow configuration file (e.g., data/HOPEproteome_TMT11workflow.workflow)
     
   manifest_file:
     type: File
-    doc: FragPipe manifest file specifying mzML file paths
-    sbg:fileTypes: "FP-MANIFEST"
+    doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
+  
+  # mzML source (mounted Cavatica directory)
+  mzml_source_dir:
+    type: Directory
+    doc: Mounted Cavatica directory containing gzipped mzML files
     
-  # mzML files from Cavatica platform
-  mzml_files:
-    type: File[]
-    doc: Array of mzML files from Cavatica project
-    sbg:fileTypes: "MZML"
+  run_subset:
+    type: boolean
+    default: false
+    doc: If true, only process first experiment (01C prefix)
 
 outputs:
-  # FragPipe outputs
-  results_directory:
-    type: Directory
-    outputSource: run_fragpipe/results_directory
-    doc: FragPipe output directory containing all results
-    
   combined_protein:
     type: File?
     outputSource: run_fragpipe/combined_protein
@@ -66,58 +56,49 @@ outputs:
     type: File?
     outputSource: run_fragpipe/combined_ion
     doc: Combined ion quantification results
-    
-  log_file:
-    type: File?
-    outputSource: run_fragpipe/log_file
-    doc: FragPipe execution log file
 
 steps:
-  # Step 1: Add decoys and contaminants to FASTA
+  # Step 1: Gunzip mzML files from mounted Cavatica directory
+  gunzip_mzml:
+    run: tools/gunzip-mzml.cwl
+    in:
+      mzml_source_dir: mzml_source_dir
+      run_subset:
+        source: run_subset
+        valueFrom: '$(self ? "true" : "false")'
+    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    
+  # Step 2: Add decoys and contaminants to FASTA
   prepare_database:
     run: tools/philosopher-database.cwl
     in:
       query_fasta: query_fasta
       uniprot_canonical_fasta: uniprot_canonical_fasta
     out: [fasta_with_decoys]
-    hints:
-      sbg:x: 0
-      sbg:y: 0
     
-  # Step 2: Filter canonical peptides
+  # Step 3: Filter canonical peptides
   filter_canonical:
     run: tools/filter-canonical-peptides.cwl
     in:
       query_fasta: query_fasta
       fasta_with_decoys: prepare_database/fasta_with_decoys
     out: [filtered_fasta, gene_symbols]
-    hints:
-      sbg:x: 200
-      sbg:y: 0
     
-  # Step 3: Run FragPipe headless
+  # Step 4: Run FragPipe headless
   run_fragpipe:
     run: tools/fragpipe-headless.cwl
     in:
       filtered_fasta: filter_canonical/filtered_fasta
       workflow_file: workflow_file
-      manifest_file: manifest_file
-      mzml_files: mzml_files
-    out: [results_directory, combined_protein, combined_peptide, combined_ion, log_file]
-    hints:
-      sbg:x: 400
-      sbg:y: 0
+      manifest_file: gunzip_mzml/mzml_manifest
+      mzml_directory: gunzip_mzml/mzml_directory
+    out: [combined_protein, combined_peptide, combined_ion, log_file]
 
 $namespaces:
-  sbg: https://sevenbridges.com
-
+  sbg: "https://sevenbridges.com/"
 hints:
-  sbg:maxNumberOfParallelInstances: 1
-
-sbg:projectName: FragPipe Proteomics Analysis
-sbg:categories:
-  - Proteomics
-  - Mass Spectrometry
-  - Quantification
-sbg:toolkit: FragPipe
-sbg:toolkitVersion: "23.1"
+- class: "sbg:maxNumberOfParallelInstances"
+  value: 2
+"sbg:links":
+- id: "https://github.com/childrens-bti/fragpipe_cwl/tree/workflow_sketch" # will update with stable release
+  label: github-release
