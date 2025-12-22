@@ -5,14 +5,13 @@ query_fasta="$1"
 fasta_with_decoys="$2"
 
 # splice event genes
-awk '/^>/ {
-  line = $0
-  sub(/^.*_/, "", line)
-  sub(/_phase[0-9]+$/, "", line)
-  print line
-}' "$query_fasta" \
-| grep -v '^$' \
-| sort -u > splice_event_genes.txt
+awk '
+/^>/ {
+  line = substr($0, 2)  # drop leading ">"
+  if (match(line, /_([^_]+)_phase[0-9]+$/, a)) {
+    print a[1]
+  }
+}' "$query_fasta" | sort -u > splice_event_genes.txt
 
 # snv genes
 awk -F '|' '{print $3}' "$query_fasta" \
