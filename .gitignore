@@ -53,3 +53,7 @@ run_data.sh
 # ignore cwl local run temp files
 .cwl-tmp/
 .cwl-out/
+
+# sbfs mount temp files
+.sbfs-home/
+.sbfs-log/
