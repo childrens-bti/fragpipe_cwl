@@ -74,14 +74,11 @@ done < <(find "$SOURCE_DIR" -type f -name "*.mzML.gz" -print0)
 # Create mzml_files.txt (all mzML paths)
 find "$OUT_DIR" -type f -name "*.mzML" | sort > mzml_files.txt
 
-# Create mzml_manifest.fp-manifest
-# Format here: <path>\t<experiment>\t\tDDA
-# (2nd col = experiment/group so FragPipe separates outputs by experiment)
-: > mzml_manifest.fp-manifest
+# mzml_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
 while IFS= read -r filepath; do
-  exp="$(basename "$(dirname "$filepath")")"
-  echo -e "${filepath}\t${exp}\t\tDDA"
-done < mzml_files.txt >> mzml_manifest.fp-manifest
+  basename=$(basename "$filepath" .mzML)
+  echo -e "${filepath}\t${basename}\t\tDDA"
+done < mzml_files.txt > mzml_manifest.fp-manifest
 
 echo "Decompression complete. $(wc -l < mzml_files.txt) mzML files ready."
 echo "Experiments found:"
