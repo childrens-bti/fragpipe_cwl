@@ -6,19 +6,18 @@ FILTERED_FASTA="$1"
 WORKFLOW_FILE="$2"
 MANIFEST_FILE="$3"
 
-# Copy FragPipe install into writable working directory and set writable HOME for config/cache
+
+# Set up writable runtime directory and HOME for FragPipe config/cache
+RUNTIME_DIR="$(pwd)/fragpipe-runtime"
 FRAGPIPE_SRC="/fragpipe_bin/fragPipe-22.0/fragpipe"
-FRAGPIPE_RUNTIME="$(pwd)/fragpipe-runtime"
-if [ ! -d "$FRAGPIPE_RUNTIME" ]; then
-  cp -R "$FRAGPIPE_SRC" "$FRAGPIPE_RUNTIME"
+if [ ! -d "$RUNTIME_DIR" ]; then
+  cp -R "$FRAGPIPE_SRC" "$RUNTIME_DIR"
 fi
-mkdir -p "$FRAGPIPE_RUNTIME/cache"
-
-FRAGPIPE_BIN="$FRAGPIPE_RUNTIME/bin/fragpipe"
-FRAGPIPE_TOOLS="$FRAGPIPE_RUNTIME/tools"
-
-# Ensure FragPipe config directory exists (HOME set to runtime.outdir by CWL)
+export HOME="$RUNTIME_DIR"
 mkdir -p "$HOME/.config/FragPipe" "$HOME/.cache"
+
+FRAGPIPE_BIN="$RUNTIME_DIR/bin/fragpipe"
+FRAGPIPE_TOOLS="$RUNTIME_DIR/tools"
 
 # Get absolute path to FASTA for FragPipe
 FASTA_ABS="$(cd "$(dirname "$FILTERED_FASTA")" && pwd)/$(basename "$FILTERED_FASTA")"
