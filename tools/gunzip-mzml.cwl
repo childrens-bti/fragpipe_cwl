@@ -31,6 +31,12 @@ inputs:
     inputBinding:
       position: 2
 
+  manifest_file:
+    type: File
+    doc: Manifest file listing mzML base names to process (required)
+    inputBinding:
+      position: 3
+
 outputs:
   mzml_directory:
     type: Directory

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+
+# Usage: gunzip-mzml.sh <SOURCE_DIR> [RUN_SUBSET] <MANIFEST_FILE>
 SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
+MANIFEST_FILE="$3"
 OUT_DIR="$(pwd)/mzml_files"
 
 # Ensure output path is a directory
@@ -66,10 +69,25 @@ process_file() {
 export -f process_file
 export RUN_SUBSET OUT_DIR SOURCE_DIR_ABS
 
-# Find and decompress
-while IFS= read -r -d '' f; do
-  process_file "$f"
-done < <(find "$SOURCE_DIR" -type f -name "*.mzML.gz" -print0)
+
+# Manifest file is required
+if [[ -z "$MANIFEST_FILE" || ! -f "$MANIFEST_FILE" ]]; then
+  echo "ERROR: Manifest file is required and was not found: $MANIFEST_FILE" >&2
+  exit 2
+fi
+echo "Using manifest file: $MANIFEST_FILE"
+# Read base names from 2nd column (tab-separated)
+mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{print $2}' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
+# Find all mzML.gz files and filter by base name
+find "$SOURCE_DIR" -type f -name "*.mzML.gz" -print0 | while IFS= read -r -d '' f; do
+  base="$(basename "$f" .mzML.gz)"
+  for m in "${MANIFEST_BASENAMES[@]}"; do
+    if [[ "$base" == "$m" ]]; then
+      process_file "$f"
+      break
+    fi
+  done
+done
 
 # Create mzml_files.txt (all mzML paths)
 find "$OUT_DIR" -type f -name "*.mzML" | sort > mzml_files.txt

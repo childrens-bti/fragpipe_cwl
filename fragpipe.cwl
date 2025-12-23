@@ -116,6 +116,7 @@ steps:
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
+      manifest_file: manifest_file
     out: [mzml_directory, mzml_file_list, mzml_manifest]
     
   # Step 2: Add decoys and contaminants to FASTA
