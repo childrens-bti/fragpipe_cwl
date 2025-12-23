@@ -78,15 +78,16 @@ fi
 echo "Using manifest file: $MANIFEST_FILE"
 # Read base names from 2nd column (tab-separated)
 mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{print $2}' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
-# Find all mzML.gz files and filter by base name
-find "$SOURCE_DIR" -type f -name "*.mzML.gz" -print0 | while IFS= read -r -d '' f; do
-  base="$(basename "$f" .mzML.gz)"
-  for m in "${MANIFEST_BASENAMES[@]}"; do
-    if [[ "$base" == "$m" ]]; then
-      process_file "$f"
-      break
-    fi
-  done
+# Only process files in experiment subfolders (not directly under SOURCE_DIR)
+# For each manifest base name, find the first matching file in any subfolder (not in SOURCE_DIR itself)
+for m in "${MANIFEST_BASENAMES[@]}"; do
+  # Find the first match in subfolders only (mindepth 2)
+  f=$(find "$SOURCE_DIR" -mindepth 2 -type f -name "$m.mzML.gz" | head -n 1)
+  if [[ -n "$f" ]]; then
+    process_file "$f"
+  else
+    echo "WARNING: No matching mzML.gz found for $m in subfolders of $SOURCE_DIR" >&2
+  fi
 done
 
 # Create mzml_files.txt (all mzML paths)
