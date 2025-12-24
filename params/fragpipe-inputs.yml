@@ -26,7 +26,7 @@ mzml_source_dir:
   
 # hope cohort: /home/ubuntu/fragpipe_cwl/data/cavatica-data/projects/harenzaj/hope-proteomics/HOPE_TotalProteome_mzML
 
-run_subset: true  # Set to true to process only first experiment (01C prefix)
+run_subset: false  # Set to true to process only first experiment (01C prefix)
 
 # Output directory name (relative to the workflow working directory)
 results_dir: results

@@ -169,7 +169,13 @@ $namespaces:
   sbg: "https://sevenbridges.com/"
 hints:
 - class: "sbg:maxNumberOfParallelInstances"
-  value: 2
+  value: 4
+- class: ResourceRequirement
+  ramMin: 131072
+  coresMin: 16
+- class: sbg:AWSInstanceType
+  value: "r5.4xlarge"
+
 "sbg:links":
 - id: "https://github.com/childrens-bti/fragpipe_cwl/tree/workflow_sketch" # will update with stable release
   label: github-release
