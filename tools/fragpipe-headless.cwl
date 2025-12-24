@@ -50,85 +50,86 @@ inputs:
     inputBinding:
       position: 3
 
+  results_dir:
+    type: string
+    default: results
+    doc: Output directory for FragPipe results (relative to runtime working dir)
+    inputBinding:
+      position: 4
+
   mzml_directory:
     type: Directory
     doc: Directory containing decompressed mzML files
 
 outputs:
-  results_directory:
-    type: Directory
-    outputBinding:
-      glob: "results"
-    doc: FragPipe output directory containing all results
-
   combined_protein:
     type: File?
     outputBinding:
-      glob: "results/combined_protein.tsv"
+      glob: $(inputs.results_dir)/combined_protein.tsv
     doc: Combined protein quantification results
 
   combined_peptide:
     type: File?
     outputBinding:
-      glob: "results/combined_peptide.tsv"
+      glob: $(inputs.results_dir)/combined_peptide.tsv
     doc: Combined peptide quantification results
 
   combined_modified_peptide:
     type: File?
     outputBinding:
-      glob: "results/combined_modified_peptide.tsv"
+      glob: $(inputs.results_dir)/combined_modified_peptide.tsv
     doc: Combined modified peptide quantification results
 
   combined_ion:
     type: File?
     outputBinding:
-      glob: "results/combined_ion.tsv"
+      glob: $(inputs.results_dir)/combined_ion.tsv
     doc: Combined ion quantification results
 
   tmt_report:
     type: Directory?
     outputBinding:
-      glob: "results/tmt-report"
+      glob: $(inputs.results_dir)/tmt-report
     doc: TMT reporter ion quantification results
 
   workflow_file_out:
     type: File?
     outputBinding:
-      glob: "results/fragpipe.workflow"
+      glob: $(inputs.results_dir)/fragpipe.workflow
     doc: FragPipe workflow configuration used
 
   fragger_params:
     type: File?
     outputBinding:
-      glob: "results/fragger.params"
+      glob: $(inputs.results_dir)/fragger.params
     doc: MSFragger parameter file
 
   tmt_integrator_conf:
     type: File?
     outputBinding:
-      glob: "results/tmt-integrator-conf.yml"
+      glob: $(inputs.results_dir)/tmt-integrator-conf.yml
     doc: TMT-Integrator configuration file
 
   experiment_annotation:
     type: File?
     outputBinding:
-      glob: "results/experiment_annotation.tsv"
+      glob: $(inputs.results_dir)/experiment_annotation.tsv
     doc: Experiment annotation file
 
   sdrf_file:
     type: File?
     outputBinding:
-      glob: "results/sdrf.tsv"
+      glob: $(inputs.results_dir)/sdrf.tsv
     doc: SDRF metadata file
 
   manifest_file_out:
     type: File?
     outputBinding:
-      glob: "results/fragpipe-files.fp-manifest"
+      glob: $(inputs.results_dir)/fragpipe-files.fp-manifest
     doc: FragPipe manifest file used
 
   log_file:
     type: File?
     outputBinding:
-      glob: "results/log_*.txt"
+      glob: $(inputs.results_dir)/log_*.txt
     doc: FragPipe execution log file
