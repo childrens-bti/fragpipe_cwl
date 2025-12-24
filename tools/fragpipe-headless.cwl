@@ -62,6 +62,12 @@ inputs:
     doc: Directory containing decompressed mzML files
 
 outputs:
+  results_directory:
+    type: Directory
+    outputBinding:
+      glob: $(inputs.results_dir)
+    doc: FragPipe results directory
+    
   combined_protein:
     type: File?
     outputBinding:
@@ -133,3 +139,13 @@ outputs:
     outputBinding:
       glob: $(inputs.results_dir)/log_*.txt
     doc: FragPipe execution log file
+
+$namespaces:
+  sbg: "https://sevenbridges.com/"
+
+hints:
+  - class: ResourceRequirement
+    ramMin: 131072
+    coresMin: 16
+  - class: sbg:AWSInstanceType
+    value: "r5.4xlarge"
