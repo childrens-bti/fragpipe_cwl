@@ -5,8 +5,6 @@ set -o pipefail
 FILTERED_FASTA="$1"
 WORKFLOW_FILE="$2"
 MANIFEST_FILE="$3"
-RESULTS_DIR="$4"
-
 
 # Set up writable runtime directory and HOME for FragPipe config/cache
 RUNTIME_DIR="$(pwd)/fragpipe-runtime"
@@ -19,6 +17,7 @@ mkdir -p "$HOME/.config/FragPipe" "$HOME/.cache"
 
 FRAGPIPE_BIN="$RUNTIME_DIR/bin/fragpipe"
 FRAGPIPE_TOOLS="$RUNTIME_DIR/tools"
+RESULTS_DIR="results"
 RESULTS_DIR="$(cd "$(pwd)" && echo "$(pwd)/$RESULTS_DIR")"
 mkdir -p "$RESULTS_DIR"
 

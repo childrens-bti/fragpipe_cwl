@@ -50,12 +50,6 @@ inputs:
     inputBinding:
       position: 3
 
-  results_dir:
-    type: string
-    doc: Output directory for FragPipe results (relative to runtime working dir)
-    inputBinding:
-      position: 4
-
   mzml_directory:
     type: Directory
     doc: Directory containing decompressed mzML files
@@ -130,5 +124,5 @@ outputs:
   log_file:
     type: File?
     outputBinding:
-      glob: $(inputs.results_dir)/log_*.txt
+      glob: $(inputs.results_dir)/log*.txt
     doc: FragPipe execution log file

@@ -41,10 +41,6 @@ inputs:
     default: false
     doc: If true, only process first experiment (01C prefix)
 
-  results_dir:
-    type: string
-    doc: Output directory for FragPipe results (relative to runtime working dir)
-
 outputs:
   combined_protein:
     type: File?
@@ -142,7 +138,6 @@ steps:
       workflow_file: workflow_file
       manifest_file: gunzip_mzml/mzml_manifest
       mzml_directory: gunzip_mzml/mzml_directory
-      results_dir: results_dir
     out:
       - combined_protein
       - combined_peptide
