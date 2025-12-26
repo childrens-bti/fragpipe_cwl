@@ -61,12 +61,6 @@ inputs:
     doc: Directory containing decompressed mzML files
 
 outputs:
-  results_directory:
-    type: Directory
-    outputBinding:
-      glob: $(inputs.results_dir)
-    doc: FragPipe results directory
-
   combined_protein:
     type: File?
     outputBinding:

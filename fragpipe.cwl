@@ -46,11 +46,6 @@ inputs:
     doc: Output directory for FragPipe results (relative to runtime working dir)
 
 outputs:
-  results_directory:
-    type: Directory
-    outputSource: run_fragpipe/results_directory
-    doc: FragPipe results directory
-
   combined_protein:
     type: File?
     outputSource: run_fragpipe/combined_protein
@@ -149,7 +144,6 @@ steps:
       mzml_directory: gunzip_mzml/mzml_directory
       results_dir: results_dir
     out:
-      - results_directory
       - combined_protein
       - combined_peptide
       - combined_modified_peptide
