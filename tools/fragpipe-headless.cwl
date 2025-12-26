@@ -52,7 +52,6 @@ inputs:
 
   results_dir:
     type: string
-    default: results
     doc: Output directory for FragPipe results (relative to runtime working dir)
     inputBinding:
       position: 4
