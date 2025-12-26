@@ -173,7 +173,7 @@ hints:
   ramMin: 131072
   coresMin: 16
 - class: sbg:AWSInstanceType
-  value: "r5.4xlarge"
+  value: "m5.8xlarge"
 
 "sbg:links":
 - id: "https://github.com/childrens-bti/fragpipe_cwl/tree/workflow_sketch" # will update with stable release
