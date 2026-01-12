@@ -94,5 +94,5 @@ COPY tools/diaTracer-1.1.5.jar ${FRAGPIPE_TOOLS}/diaTracer-1.1.5.jar
 COPY tools/IonQuant-1.10.27.jar ${FRAGPIPE_TOOLS}/IonQuant-1.10.27.jar
 
 # Copy workflow scripts
-COPY scripts/  /opt/impact_trial/scripts/
-RUN chmod -R +rx /opt/impact_trial/scripts/ && chown -R 1000:1000 /opt/impact_trial/scripts/
+COPY scripts/  /opt/scripts/
+RUN chmod -R +rx /opt/scripts/ && chown -R 1000:1000 /opt/scripts/
