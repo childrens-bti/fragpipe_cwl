@@ -7,7 +7,7 @@ doc: |
   This tool executes FragPipe with a specified workflow, manifest file,
   and processed FASTA database.
 
-baseCommand: [bash, /opt/impact_trial/scripts/fragpipe-headless.sh]
+baseCommand: [bash, /opt/scripts/fragpipe-headless.sh]
 
 requirements:
   InlineJavascriptRequirement: {}

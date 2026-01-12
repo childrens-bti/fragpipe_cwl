@@ -7,7 +7,7 @@ doc: |
   This tool initializes a Philosopher workspace, adds decoys from a canonical
   UniProt FASTA and contaminants to the query FASTA file.
 
-baseCommand: [bash, /opt/impact_trial/scripts/philosopher-database.sh]
+baseCommand: [bash, /opt/scripts/philosopher-database.sh]
 
 requirements:
   InlineJavascriptRequirement: {}

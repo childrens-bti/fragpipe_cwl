@@ -7,7 +7,7 @@ doc: |
   This mirrors the filtering logic in run_fragpipe.sh by collecting all genes
   represented by custom peptide entries and dropping matching canonical records.
 
-baseCommand: [bash, /opt/impact_trial/scripts/filter-canonical-peptides.sh]
+baseCommand: [bash, /opt/scripts/filter-canonical-peptides.sh]
 
 requirements:
   InlineJavascriptRequirement: {}

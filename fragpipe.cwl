@@ -4,13 +4,15 @@ class: Workflow
 label: FragPipe Proteomics Pipeline
 doc: |
   Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
-  This workflow expects a mounted Cavatica directory containing gzipped mzML files,
-  performs FASTA preparation with decoys/contaminants, and runs FragPipe analysis.
+  This workflow can process both gzipped and non-gzipped mzML files.
+  It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
+  Use skip_gunzip=true when files are already decompressed.
 
 requirements:
   InlineJavascriptRequirement: {}
   StepInputExpressionRequirement: {}
   SubworkflowFeatureRequirement: {}
+  MultipleInputFeatureRequirement: {}
 
 inputs:
   # FASTA inputs
@@ -34,12 +36,17 @@ inputs:
   # mzML source (mounted Cavatica directory)
   mzml_source_dir:
     type: Directory
-    doc: Mounted Cavatica directory containing gzipped mzML files
+    doc: Directory containing mzML files (gzipped or uncompressed)
     
   run_subset:
     type: boolean
     default: false
     doc: If true, only process first experiment (01C prefix)
+
+  skip_gunzip:
+    type: boolean
+    default: false
+    doc: If true, skip gunzip step (mzML files are already decompressed)
 
 outputs:
   combined_protein:
@@ -103,10 +110,25 @@ outputs:
     doc: FragPipe execution log file
 
 steps:
-  # Step 1: Gunzip mzML files from mounted Cavatica directory
+  # Step 1a: Gunzip mzML files (if files are compressed)
   gunzip_mzml:
     run: tools/gunzip-mzml.cwl
+    when: $(inputs.skip_gunzip === false)
     in:
+      skip_gunzip: skip_gunzip
+      mzml_source_dir: mzml_source_dir
+      run_subset:
+        source: run_subset
+        valueFrom: '$(self ? "true" : "false")'
+      manifest_file: manifest_file
+    out: [mzml_directory, mzml_file_list, mzml_manifest]
+
+  # Step 1b: Copy mzML files (if files are already uncompressed)
+  copy_mzml:
+    run: tools/copy-mzml.cwl
+    when: $(inputs.skip_gunzip === true)
+    in:
+      skip_gunzip: skip_gunzip
       mzml_source_dir: mzml_source_dir
       run_subset:
         source: run_subset
@@ -136,8 +158,12 @@ steps:
     in:
       filtered_fasta: filter_canonical/filtered_fasta
       workflow_file: workflow_file
-      manifest_file: gunzip_mzml/mzml_manifest
-      mzml_directory: gunzip_mzml/mzml_directory
+      manifest_file:
+        source: [gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
+        pickValue: first_non_null
+      mzml_directory:
+        source: [gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
+        pickValue: first_non_null
     out:
       - combined_protein
       - combined_peptide

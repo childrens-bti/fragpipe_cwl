@@ -1,13 +1,12 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-label: Gunzip mzML Files
+label: Copy mzML Files
 doc: |
-  Decompress gzipped mzML files from a mounted Cavatica directory
-  to a local output directory. Also handles annotation files and 
-  generates FragPipe manifest.
+  Copy uncompressed mzML files from a source directory to a local output directory.
+  Also handles annotation files and generates FragPipe manifest.
 
-baseCommand: [bash, /opt/scripts/gunzip-mzml.sh]
+baseCommand: [bash, /opt/scripts/copy-mzml.sh]
 
 requirements:
   InlineJavascriptRequirement: {}
@@ -22,7 +21,7 @@ requirements:
 inputs:
   mzml_source_dir:
     type: Directory
-    doc: Mounted Cavatica directory with gzipped mzML files
+    doc: Directory containing uncompressed mzML files
     inputBinding:
       position: 1
 
@@ -43,16 +42,16 @@ outputs:
     type: Directory
     outputBinding:
       glob: "mzml_files"
-    doc: Directory containing unzipped mzML files
+    doc: Directory containing copied mzML files
 
   mzml_file_list:
     type: File
     outputBinding:
       glob: "mzml_files.txt"
-    doc: Text file listing all unzipped mzML file paths
+    doc: Text file listing all mzML file paths
 
   mzml_manifest:
     type: File
     outputBinding:
       glob: "mzml_manifest.fp-manifest"
-    doc: FragPipe manifest file for decompressed mzML files
+    doc: FragPipe manifest file for mzML files
