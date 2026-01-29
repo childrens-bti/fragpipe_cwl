@@ -1,1 +1,0 @@
-# A template for developing cwl workflows

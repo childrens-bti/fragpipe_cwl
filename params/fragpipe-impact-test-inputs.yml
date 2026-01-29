@@ -1,0 +1,27 @@
+# FragPipe Local Workflow Input Parameters
+# This file specifies all required inputs for the fragpipe.cwl workflow
+
+# FASTA files
+query_fasta:
+  class: File
+  path: ../data/custom_filtered.fasta
+
+uniprot_canonical_fasta:
+  class: File
+  path: ../data/references/UP000005640_9606.fasta.gz
+
+# FragPipe configuration files
+workflow_file:
+  class: File
+  path: ../data/impact-test-LFQ-MBR.workflow.txt
+
+manifest_file:
+  class: File
+  path: ../data/impact-test-filesmanifest.fp-manifest.txt
+# mzML source directory (mounted Cavatica)
+mzml_source_dir:
+  class: Directory
+  path: /home/ubuntu/fragpipe_cwl/data/bti-private-us-east-1-prd-impact-trial/
+  
+run_subset: false  # Set to true to process only first experiment (01C prefix)
+skip_gunzip: true  # Set to true when mzML files are already uncompressed

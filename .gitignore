@@ -14,7 +14,6 @@ __pycache__/
 *.cwl.json
 *.inputs.json
 *.outputs.json
-**/*.sh
 !prep.sh
 *.err
 *.out
@@ -28,22 +27,36 @@ tmp/
 *.zip
 outputs/*
 !outputs/.gitkeep
-params/*
 !params/.gitkeep
 test/
 logs/*
 !logs/.gitkeep
 sbg-hints/* 
 !sbg-hints/.gitkeep
-workflows/*
 !workflows/.gitkeep
-tools/*
 !tools/.gitkeep
-scripts/*
 !scripts/.gitkeep
 # harmonized data
 data/*
 !data/.gitkeep
+!data/*manifest
+!data/*workflow
+!data/references/
 # manifest files
 manifests/*
 !manifests/.gitkeep
+
+# ignore fragpipe tools (only for initial docker build)
+tools/*.jar
+
+# Ignore root shell scripts
+run_fragpipe.sh
+run_data.sh
+
+# ignore cwl local run temp files
+.cwl-tmp/
+.cwl-out/
+logs/
+# sbfs mount temp files
+.sbfs-home/
+.sbfs-log/
