@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Configure wine to use the shared wineprefix
+export WINEPREFIX=/wineprefix64
+export WINEARCH=win64
+export WINEDEBUG=-all
+
 # Usage: msconvert-raw.sh <SOURCE_DIR> <RUN_SUBSET> <SUBSET_PATTERN> <MANIFEST_FILE> [NUM_CORES]
 SOURCE_DIR="$1"
 RUN_SUBSET="$2"

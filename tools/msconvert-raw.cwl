@@ -6,27 +6,19 @@ doc: |
   Convert Thermo Fisher .raw files to mzML format using msconvert.
   Uses ProteoWizard msconvert via wine.
 
-baseCommand: [bash, msconvert-raw.sh]
+baseCommand: [bash, /opt/scripts/msconvert-raw.sh]
 
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses:latest"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:latest"
   InitialWorkDirRequirement:
     listing:
-      - $(inputs.conversion_script)
       - writable: true
         entry: mzml_files
         entryname: mzml_files
 
 inputs:
-  conversion_script:
-    type: File
-    doc: The msconvert-raw.sh script file
-    inputBinding:
-      position: 0
-      valueFrom: $(null)
-
   input_type:
     type: string?
     doc: Optional - detected input type from detect-input-type tool (not passed to script)

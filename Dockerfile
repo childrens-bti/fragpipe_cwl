@@ -40,31 +40,6 @@ RUN apt-get -y update --fix-missing \
 # Install CAVATICA SBFS
 RUN curl https://igor.sbgenomics.com/downloads/sbfs/install.sh -sSf | sh
 
-# Install Wine for msconvert (required for Thermo .raw file conversion)
-RUN dpkg --add-architecture i386 \
-    && mkdir -pm755 /etc/apt/keyrings \
-    && wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
-    && wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/focal/winehq-focal.sources \
-    && apt-get -y update \
-    && apt-get -y install --no-install-recommends --install-suggests winehq-stable \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Download and configure ProteoWizard for wine
-RUN mkdir -p /opt/pwiz \
-    && cd /opt/pwiz \
-    && wget -q https://github.com/ProteoWizard/pwiz/releases/download/release_3_0_24356_ef1e4ce98/pwiz-setup-3.0.24356-x86_64.tar.bz2 \
-    && tar -xjf pwiz-setup-3.0.24356-x86_64.tar.bz2 \
-    && rm pwiz-setup-3.0.24356-x86_64.tar.bz2
-
-# Initialize wine with world-readable prefix
-ENV WINEPREFIX=/opt/wineprefix64
-ENV WINEARCH=win64
-ENV WINEDEBUG=-all
-RUN wineboot --init \
-    && ln -s /opt/pwiz ${WINEPREFIX}/drive_c/pwiz \
-    && chmod -R 755 ${WINEPREFIX}
-
 # Install Mono
 RUN gpg --homedir /tmp --no-default-keyring \
         --keyring /usr/share/keyrings/mono-official-archive-keyring.gpg \
