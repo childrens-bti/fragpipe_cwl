@@ -48,12 +48,14 @@ inputs:
     doc: If true, only process files matching subset_pattern
 
   subset_pattern:
-    type: string
+    type: string?
+    default: ""
     doc: |
       Full experiment or patient folder name to match when run_subset is true.
       Matches directory path in the folder structure (e.g., "N849" matches */N849/*)
       Works for all input types: .raw, .mzML.gz, and .mzML files.
       Raw files should be organized in the same folder structure as mzML files.
+      Not required when run_subset is false.
 
 outputs:
   combined_protein:
