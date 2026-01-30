@@ -22,8 +22,13 @@ manifest_file:
 # mzML source directory (mounted Cavatica)
 mzml_source_dir:
   class: Directory
-  path: /home/ubuntu/fragpipe_cwl/data/cavatica-data/projects/harenzaj/proteomics
+  path: /home/ubuntu/fragpipe_cwl/data/cavatica-data-cptac/projects/harenzaj/proteomics
   
 # hope cohort: /home/ubuntu/fragpipe_cwl/data/cavatica-data/projects/harenzaj/hope-proteomics/HOPE_TotalProteome_mzML
 
-run_subset: false  # Set to true to process only first experiment (01C prefix)
+# Input type specification
+input_type: "mzml_gz"  # Type of input files: "raw", "mzml_gz", or "mzml"
+
+# Processing options
+run_subset: true  # Set to true to process only files matching subset_pattern
+subset_pattern: "01CBTTC_PBT_Proteome_HMS_20180626"  # Pattern to match in directory paths (default: "01C" for backward compatibility)

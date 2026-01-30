@@ -4,9 +4,9 @@ class: Workflow
 label: FragPipe Proteomics Pipeline
 doc: |
   Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
-  This workflow can process both gzipped and non-gzipped mzML files.
+  This workflow can process .raw, .mzML.gz, and .mzML files.
   It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
-  Use skip_gunzip=true when files are already decompressed.
+  Input type must be specified: "raw", "mzml_gz", or "mzml".
 
 requirements:
   InlineJavascriptRequirement: {}
@@ -33,20 +33,27 @@ inputs:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
   
-  # mzML source (mounted Cavatica directory)
+  # mzML/raw source (mounted Cavatica or S3 directory)
   mzml_source_dir:
     type: Directory
-    doc: Directory containing mzML files (gzipped or uncompressed)
+    doc: Directory containing input files (.raw, .mzML.gz, or .mzML)
+
+  input_type:
+    type: string
+    doc: Type of input files - must be one of "raw", "mzml_gz", or "mzml"
     
   run_subset:
     type: boolean
     default: false
-    doc: If true, only process first experiment (01C prefix)
+    doc: If true, only process files matching subset_pattern
 
-  skip_gunzip:
-    type: boolean
-    default: false
-    doc: If true, skip gunzip step (mzML files are already decompressed)
+  subset_pattern:
+    type: string
+    doc: |
+      Full experiment or patient folder name to match when run_subset is true.
+      Matches directory path in the folder structure (e.g., "N849" matches */N849/*)
+      Works for all input types: .raw, .mzML.gz, and .mzML files.
+      Raw files should be organized in the same folder structure as mzML files.
 
 outputs:
   combined_protein:
@@ -110,29 +117,49 @@ outputs:
     doc: FragPipe execution log file
 
 steps:
-  # Step 1a: Gunzip mzML files (if files are compressed)
-  gunzip_mzml:
-    run: tools/gunzip-mzml.cwl
-    when: $(inputs.skip_gunzip === false)
+  # Step 1a: Convert .raw files to mzML (if input is .raw)
+  convert_raw:
+    run: tools/msconvert-raw.cwl
+    when: $(inputs.input_type === "raw")
     in:
-      skip_gunzip: skip_gunzip
-      mzml_source_dir: mzml_source_dir
+      conversion_script:
+        default:
+          class: File
+          location: scripts/msconvert-raw.sh
+      input_type: input_type
+      raw_source_dir: mzml_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
+      subset_pattern: subset_pattern
       manifest_file: manifest_file
     out: [mzml_directory, mzml_file_list, mzml_manifest]
 
-  # Step 1b: Copy mzML files (if files are already uncompressed)
-  copy_mzml:
-    run: tools/copy-mzml.cwl
-    when: $(inputs.skip_gunzip === true)
+  # Step 1b: Gunzip mzML files (if input is .mzML.gz)
+  gunzip_mzml:
+    run: tools/gunzip-mzml.cwl
+    when: $(inputs.input_type === "mzml_gz")
     in:
-      skip_gunzip: skip_gunzip
+      input_type: input_type
       mzml_source_dir: mzml_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
+      subset_pattern: subset_pattern
+      manifest_file: manifest_file
+    out: [mzml_directory, mzml_file_list, mzml_manifest]
+
+  # Step 1c: Copy mzML files (if input is already .mzML)
+  copy_mzml:
+    run: tools/copy-mzml.cwl
+    when: $(inputs.input_type === "mzml")
+    in:
+      input_type: input_type
+      mzml_source_dir: mzml_source_dir
+      run_subset:
+        source: run_subset
+        valueFrom: '$(self ? "true" : "false")'
+      subset_pattern: subset_pattern
       manifest_file: manifest_file
     out: [mzml_directory, mzml_file_list, mzml_manifest]
     
@@ -159,10 +186,10 @@ steps:
       filtered_fasta: filter_canonical/filtered_fasta
       workflow_file: workflow_file
       manifest_file:
-        source: [gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
+        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
         pickValue: first_non_null
       mzml_directory:
-        source: [gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
+        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
         pickValue: first_non_null
     out:
       - combined_protein

@@ -20,6 +20,15 @@ requirements:
         entryname: mzml_files
 
 inputs:
+  input_type:
+    type: string?
+    doc: Optional - detected input type from detect-input-type tool (not passed to script)
+
+  skip_gunzip:
+    type: boolean?
+    default: false
+    doc: Optional - for backward compatibility (not passed to script)
+
   mzml_source_dir:
     type: Directory
     doc: Mounted Cavatica directory with gzipped mzML files
@@ -32,11 +41,17 @@ inputs:
     inputBinding:
       position: 2
 
+  subset_pattern:
+    type: string
+    doc: Pattern to match in directory path when run_subset is true
+    inputBinding:
+      position: 3
+
   manifest_file:
     type: File
     doc: Manifest file listing mzML base names to process (required)
     inputBinding:
-      position: 3
+      position: 4
 
 outputs:
   mzml_directory:
