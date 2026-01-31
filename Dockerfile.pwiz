@@ -1,9 +1,8 @@
 FROM proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:latest
 
-# Create a non-root user and give ownership of wineprefix
-RUN useradd -m -u 1000 wineuser || true \
-    && chown -R 1000:1000 /wineprefix64 \
-    && chmod -R 755 /wineprefix64
+# Make wineprefix world-accessible for any user to use wine
+RUN chown -R 1000:1000 /wineprefix64 2>/dev/null || true \
+    && chmod -R 777 /wineprefix64
 
 # Copy msconvert script
 COPY scripts/msconvert-raw.sh /opt/scripts/msconvert-raw.sh

@@ -82,6 +82,7 @@ process_file() {
       --outdir "$out_exp_dir" \
       "$file" > "$log_file" 2>&1 || {
         echo "ERROR: Conversion failed for $file (see $log_file)" >&2
+        cat "$log_file" >&2
         exit 1
       }
   fi
