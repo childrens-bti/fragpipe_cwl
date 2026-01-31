@@ -1,8 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configure wine to use the shared wineprefix
-export WINEPREFIX=/wineprefix64
+# Handle wine prefix ownership - wine is strict about this
+# If /wineprefix64 exists and is writable, try to use it
+# Otherwise copy it to /tmp where current user owns it
+CURRENT_UID=$(id -u)
+WINEPREFIX_OWNER=$(stat -c '%U' /wineprefix64 2>/dev/null || echo "unknown")
+
+if [ "$CURRENT_UID" = "1000" ] && [ "$WINEPREFIX_OWNER" = "1000" ]; then
+  # Local EC2: user is 1000 and owns /wineprefix64
+  export WINEPREFIX=/wineprefix64
+else
+  # Cavatica or different user: copy /wineprefix64 to /tmp
+  echo "Copying /wineprefix64 to /tmp (current user: $CURRENT_UID, owner: $WINEPREFIX_OWNER)"
+  export WINEPREFIX="/tmp/wineprefix"
+  rm -rf "$WINEPREFIX" 2>/dev/null || true
+  cp -r /wineprefix64 "$WINEPREFIX" 2>/dev/null || {
+    # Fallback: create fresh prefix
+    mkdir -p "$WINEPREFIX"
+    echo "WARNING: Could not copy /wineprefix64, using fresh prefix"
+  }
+fi
+
 export WINEARCH=win64
 export WINEDEBUG=-all
 
