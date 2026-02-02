@@ -28,3 +28,6 @@ input_type: "raw"  # Type of input files: "raw", "mzml_gz", or "mzml"
   
 run_subset: true  # Set to true to process only files matching subset_pattern
 subset_pattern: "N849"  # Pattern to match - e.g., "N849" processes only */N849/* directories
+
+# Output file naming
+output_basename: "N849"  # Base name for all output files

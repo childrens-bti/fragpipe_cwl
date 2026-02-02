@@ -32,3 +32,6 @@ input_type: "mzml_gz"  # Type of input files: "raw", "mzml_gz", or "mzml"
 # Processing options
 run_subset: true  # Set to true to process only files matching subset_pattern
 subset_pattern: "01CBTTC_PBT_Proteome_HMS_20180626"  # Pattern to match in directory paths (default: "01C" for backward compatibility)
+
+# Output file naming
+output_basename: "01CBTTC_PBT_Proteome_HMS_20180626"  # Base name for all output files

@@ -57,6 +57,10 @@ inputs:
       Raw files should be organized in the same folder structure as mzML files.
       Not required when run_subset is false.
 
+  output_basename:
+    type: string
+    doc: Base name for all output files (e.g., "SAMPLE001_N849")
+
 outputs:
   combined_protein:
     type: File?
@@ -183,6 +187,7 @@ steps:
     in:
       filtered_fasta: filter_canonical/filtered_fasta
       workflow_file: workflow_file
+      output_basename: output_basename
       manifest_file:
         source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
         pickValue: first_non_null

@@ -30,3 +30,6 @@ input_type: "mzml_gz"  # Type of input files: "raw", "mzml_gz", or "mzml"
 # Processing options
 run_subset: true  # Set to true to process only files matching subset_pattern
 subset_pattern: "01C"  # Pattern to match - "01C" processes only */01C*/ directories
+
+# Output file naming
+output_basename: "HOPE"  # Base name for all output files

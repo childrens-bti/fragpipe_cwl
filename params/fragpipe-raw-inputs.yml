@@ -29,9 +29,12 @@ mzml_source_dir:
   class: Directory
   path: /path/to/your/raw/files/directory
 
+# Input type specification
+input_type: "raw"  # Type of input files: "raw", "mzml_gz", or "mzml"
+
 # Processing options
 run_subset: false  # Set to true to process only files matching subset_pattern
 subset_pattern: "N849"  # Pattern - for .raw files, matches filename prefix (e.g., files starting with "01C")
 
-# Note: skip_gunzip parameter is deprecated and ignored
-# The workflow now auto-detects input file type (.raw, .mzML.gz, or .mzML)
+# Output file naming
+output_basename: "sample"  # Base name for all output files
