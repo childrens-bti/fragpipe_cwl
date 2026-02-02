@@ -4,7 +4,7 @@
 # FASTA files
 query_fasta:
   class: File
-  path: ../data/custom_filtered.fasta
+  path: ../data/BS_1CZPVCXR_BS_S6Q7NKA3_tumor_specific_filtered.fasta
 
 uniprot_canonical_fasta:
   class: File
