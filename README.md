@@ -1,6 +1,6 @@
 # FragPipe CWL Workflows
 
-This directory contains Common Workflow Language (CWL) implementations of the FragPipe proteomics analysis pipeline.
+This directory contains Common Workflow Language (CWL) implementations of the [FragPipe](https://github.com/Nesvilab/FragPipe) proteomics analysis pipeline developed by [Nesvilab](https://github.com/Nesvilab).
 
 ## Structure
 
@@ -38,6 +38,8 @@ fragpipe_cwl/
 ### Main Workflow (`fragpipe.cwl`)
 
 The primary workflow that processes proteomics data from mounted directories or direct file inputs. **Now supports .raw, .mzML.gz, and .mzML files with automatic detection.**
+
+FragPipe supports a comprehensive set of workflow configurations available in the [FragPipe workflows repository](https://github.com/Nesvilab/FragPipe/tree/develop/workflows), including workflows for various quantitation methods (TMT, SILAC, LFQ, DIA, iTRAQ), post-translational modifications (phosphorylation, ubiquitination, acetylation, glycosylation), and specialized analyses (HLA peptidome, ABPP, open search).
 
 **Steps:**
 0. **Detect input type**: Auto-detect whether input files are .raw, .mzML.gz, or .mzML
@@ -268,6 +270,17 @@ outputs/
 ├── combined_peptide.tsv        # Peptide quantification (if available)
 └── combined_ion.tsv            # Ion quantification (if available)
 ```
+
+## Credits
+
+This CWL workflow implementation is based on the [FragPipe](https://github.com/Nesvilab/FragPipe) pipeline developed by [Nesvilab](https://github.com/Nesvilab). FragPipe provides an integrated environment for MS/MS proteomics data analysis and includes the following components:
+
+- **MSFragger**: Fast peptide MS/MS database search engine
+- **Philosopher**: Downstream proteomics data validation and analysis
+- **IonQuant**: Peptide quantification tool
+- **diaTracer**: DIA data processing
+
+For more information about FragPipe workflows and available analysis configurations, see the [workflows directory](https://github.com/Nesvilab/FragPipe/tree/develop/workflows) in the FragPipe repository.
 
 ## Notes
 
