@@ -11,8 +11,12 @@ PHIL_BIN="/fragpipe_bin/fragPipe-22.0/fragpipe/tools/Philosopher/philosopher-v5.
 "$PHIL_BIN" workspace --init
 
 # Add decoys and contaminants to the custom FASTA file
-gunzip -c "$UNIPROT_FASTA" | \
-  "$PHIL_BIN" database \
+# Handle both gzipped and uncompressed files
+if [[ "$UNIPROT_FASTA" == *.gz ]]; then
+  gunzip -c "$UNIPROT_FASTA"
+else
+  cat "$UNIPROT_FASTA"
+fi | "$PHIL_BIN" database \
     --custom "$QUERY_FASTA" \
     --add /dev/stdin \
     --contam

@@ -4,7 +4,7 @@
 # FASTA files
 query_fasta:
   class: File
-  path: ../data/custom_filtered.fasta
+  path: ../data/BS_1CZPVCXR_BS_S6Q7NKA3_tumor_specific_filtered.fasta
 
 uniprot_canonical_fasta:
   class: File
@@ -18,10 +18,16 @@ workflow_file:
 manifest_file:
   class: File
   path: ../data/impact-test-filesmanifest.fp-manifest.txt
-# mzML source directory (mounted Cavatica)
+# mzML source directory (IMPACT trial S3-mounted data)
 mzml_source_dir:
   class: Directory
-  path: /home/ubuntu/fragpipe_cwl/data/bti-private-us-east-1-prd-impact-trial/
+  path: /home/ubuntu/fragpipe_cwl/data/bti-private-us-east-1-prd-impact-trial/source
+
+# Input type specification
+input_type: "raw"  # Type of input files: "raw", "mzml_gz", or "mzml"
   
-run_subset: false  # Set to true to process only first experiment (01C prefix)
-skip_gunzip: true  # Set to true when mzML files are already uncompressed
+run_subset: true  # Set to true to process only files matching subset_pattern
+subset_pattern: "N849"  # Pattern to match - e.g., "N849" processes only */N849/* directories
+
+# Output file naming
+output_basename: "N849"  # Base name for all output files

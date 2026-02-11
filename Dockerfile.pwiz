@@ -1,0 +1,15 @@
+FROM proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:latest
+
+# Create a non-root user and give ownership of wineprefix
+RUN useradd -m -u 1000 wineuser || true \
+    && chown -R 1000:1000 /wineprefix64 \
+    && chmod -R 777 /wineprefix64
+
+# Copy msconvert script
+COPY scripts/msconvert-raw.sh /opt/scripts/msconvert-raw.sh
+RUN chmod a+rx /opt/scripts/msconvert-raw.sh
+
+# Keep wine environment variables
+ENV WINEPREFIX=/wineprefix64
+ENV WINEARCH=win64
+ENV WINEDEBUG=-all

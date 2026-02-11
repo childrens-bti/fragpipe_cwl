@@ -1,18 +1,17 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-label: Gunzip mzML Files
+label: MSConvert - Convert .raw files to mzML
 doc: |
-  Decompress gzipped mzML files from a mounted Cavatica directory
-  to a local output directory. Also handles annotation files and 
-  generates FragPipe manifest.
+  Convert Thermo Fisher .raw files to mzML format using msconvert.
+  Uses ProteoWizard msconvert via wine.
 
-baseCommand: [bash, /opt/scripts/gunzip-mzml.sh]
+baseCommand: [bash, /opt/scripts/msconvert-raw.sh]
 
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:latest"
   InitialWorkDirRequirement:
     listing:
       - writable: true
@@ -24,17 +23,12 @@ inputs:
     type: string?
     doc: Optional - detected input type from detect-input-type tool (not passed to script)
 
-  skip_gunzip:
-    type: boolean?
-    default: false
-    doc: Optional - for backward compatibility (not passed to script)
-
-  mzml_source_dir:
+  raw_source_dir:
     type: Directory
-    doc: Mounted Cavatica directory with gzipped mzML files
+    doc: Directory containing .raw files
     inputBinding:
       position: 1
-
+  
   run_subset:
     type: string
     doc: Literal "true"/"false" string controlling subset processing
@@ -43,31 +37,43 @@ inputs:
 
   subset_pattern:
     type: string
-    doc: Pattern to match in directory path when run_subset is true
+    doc: Pattern to match for basename when run_subset is true
     inputBinding:
       position: 3
 
   manifest_file:
     type: File
-    doc: Manifest file listing mzML base names to process (required)
+    doc: Manifest file listing raw file base names to process (required)
     inputBinding:
       position: 4
+
+  num_cores:
+    type: int?
+    doc: Number of parallel msconvert processes (default uses runtime.cores)
+    inputBinding:
+      position: 5
+      valueFrom: $(self || runtime.cores || 12)
+
+hints:
+  ResourceRequirement:
+    coresMin: 12
+    ramMin: 32768
 
 outputs:
   mzml_directory:
     type: Directory
     outputBinding:
       glob: "mzml_files"
-    doc: Directory containing unzipped mzML files
+    doc: Directory containing converted mzML files
 
   mzml_file_list:
     type: File
     outputBinding:
       glob: "mzml_files.txt"
-    doc: Text file listing all unzipped mzML file paths
+    doc: Text file listing all converted mzML file paths
 
   mzml_manifest:
     type: File
     outputBinding:
       glob: "mzml_manifest.fp-manifest"
-    doc: FragPipe manifest file for decompressed mzML files
+    doc: FragPipe manifest file for converted mzML files

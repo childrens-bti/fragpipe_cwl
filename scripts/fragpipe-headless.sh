@@ -5,6 +5,7 @@ set -o pipefail
 FILTERED_FASTA="$1"
 WORKFLOW_FILE="$2"
 MANIFEST_FILE="$3"
+OUTPUT_BASENAME="$4"
 
 # Set up writable runtime directory and HOME for FragPipe config/cache
 RUNTIME_DIR="$(pwd)/fragpipe-runtime"
@@ -35,3 +36,47 @@ sed "s|database.db-path=.*|database.db-path=$FASTA_ABS|g" "$WORKFLOW_FILE" > "$W
   --manifest "$MANIFEST_FILE" \
   --workdir "$RESULTS_DIR" \
   --config-tools-folder "$FRAGPIPE_TOOLS"
+
+# Rename output files with output_basename prefix
+if [ -n "$OUTPUT_BASENAME" ]; then
+  echo "=== Adding output_basename prefix: $OUTPUT_BASENAME ==="
+  cd "$RESULTS_DIR"
+  
+  # List of files to rename (all files checked with if [ -f ] before renaming)
+  for file in combined_protein.tsv combined_peptide.tsv combined_modified_peptide.tsv combined_ion.tsv \
+              fragger.params fragpipe.workflow fragpipe-files.fp-manifest \
+              experiment_annotation.tsv sdrf.tsv; do
+    if [ -f "$file" ]; then
+      new_name="${OUTPUT_BASENAME}_${file}"
+      mv "$file" "$new_name"
+      echo "Renamed: $file -> $new_name"
+    fi
+  done
+  
+  # Rename optional TMT-specific configuration file (only exists for TMT workflows)
+  if [ -f "tmt-integrator-conf.yml" ]; then
+    new_name="${OUTPUT_BASENAME}_tmt-integrator-conf.yml"
+    mv "tmt-integrator-conf.yml" "$new_name"
+    echo "Renamed: tmt-integrator-conf.yml -> $new_name"
+  fi
+  
+  # Rename log file(s)
+  for logfile in log*.txt; do
+    if [ -f "$logfile" ]; then
+      new_name="${OUTPUT_BASENAME}_${logfile}"
+      mv "$logfile" "$new_name"
+      echo "Renamed: $logfile -> $new_name"
+    fi
+  done
+  
+  # Rename tmt-report directory if it exists (only exists for TMT workflows)
+  if [ -d "tmt-report" ]; then
+    new_dir="${OUTPUT_BASENAME}_tmt-report"
+    mv "tmt-report" "$new_dir"
+    echo "Renamed: tmt-report -> $new_dir"
+  fi
+  
+  cd - > /dev/null
+fi
+
+echo "=== FragPipe analysis complete ==="

@@ -2,10 +2,11 @@
 set -euo pipefail
 
 
-# Usage: gunzip-mzml.sh <SOURCE_DIR> [RUN_SUBSET] <MANIFEST_FILE>
+# Usage: gunzip-mzml.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
 SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
-MANIFEST_FILE="$3"
+SUBSET_PATTERN="$3"
+MANIFEST_FILE="$4"
 OUT_DIR="$(pwd)/mzml_files"
 
 # Ensure output path is a directory
@@ -22,14 +23,15 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 echo "run_subset is set to '$RUN_SUBSET'"
+echo "subset_pattern is set to '$SUBSET_PATTERN'"
 SOURCE_DIR_ABS="$(readlink -f "$SOURCE_DIR")"
 
 # Process one mzML.gz file: decide experiment, copy annotation, gunzip into per-experiment folder
 process_file() {
   local file="$1"
 
-  # subset filter: only paths containing /01C
-  if [[ "$RUN_SUBSET" == "true" && "$file" != */01C* ]]; then
+  # subset filter: only paths containing the subset pattern
+  if [[ "$RUN_SUBSET" == "true" && "$file" != */$SUBSET_PATTERN/* ]]; then
     return 0
   fi
 

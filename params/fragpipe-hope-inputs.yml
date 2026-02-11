@@ -23,5 +23,13 @@ manifest_file:
 mzml_source_dir:
   class: Directory
   path: /home/ubuntu/fragpipe_cwl/data/cavatica-data/projects/harenzaj/hope-proteomics/HOPE_TotalProteome_mzML
+
+# Input type specification
+input_type: "mzml_gz"  # Type of input files: "raw", "mzml_gz", or "mzml"
   
-run_subset: true  # Set to true to process only first experiment (01C prefix)
+# Processing options
+run_subset: true  # Set to true to process only files matching subset_pattern
+subset_pattern: "01C"  # Pattern to match - "01C" processes only */01C*/ directories
+
+# Output file naming
+output_basename: "HOPE"  # Base name for all output files
