@@ -51,15 +51,7 @@ FragPipe supports a comprehensive set of workflow configurations available in th
 3. **Filter canonical peptides**: Remove canonical peptides by gene symbols
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
 
-**Key Features:**
-- **Automatic input detection**: Detects .raw, .mzML.gz, or .mzML and processes accordingly
-- **Raw file support**: Converts Thermo Fisher .raw files using msconvert
-- **Automatic manifest generation**: Creates FragPipe manifest from processed files
-- **TMT annotation file support**: Copies annotation.txt if present
-- **Subset processing**: Process only specific experiments when `run_subset: true`
-- **Writable mzML directory**: Uses InplaceUpdateRequirement for FragPipe temporary files
-- **Dynamic FASTA path injection**: Workflow file updated at runtime with correct FASTA path
-- **Backward compatible**: `skip_gunzip` parameter deprecated but maintained for compatibility
+See [Key Features](#key-features) section below for complete feature list.
 
 ## Usage
 
@@ -79,26 +71,158 @@ bash scripts/sbfs-mount.sh harenzaj/proteomics data/cavatica-data
 cwltool --validate fragpipe.cwl
 ```
 
-### Local Execution
+### Workflow Execution
+
+The workflow automatically detects your input file type (.raw, .mzML.gz, or .mzML) and processes accordingly. Follow these steps:
+
+#### Step 1: Prepare Your Data
+
+Organize your files in a source directory with experiment subfolders:
 
 **For .mzML or .mzML.gz files:**
-```bash
-cwltool --leave-tmpdir --tmpdir-prefix ./.cwl-tmp/ --tmp-outdir-prefix ./.cwl-out/ \
-    --outdir outputs/ fragpipe.cwl params/fragpipe-inputs.yml
+```
+source_dir/
+├── experiment_1/
+│   ├── sample_001.mzML      (or .mzML.gz)
+│   ├── sample_002.mzML
+│   └── annotation.txt        (optional, for TMT workflows)
+├── experiment_2/
+│   ├── sample_003.mzML
+│   └── sample_004.mzML
 ```
 
 **For .raw files:**
-```bash
-cwltool --leave-tmpdir --tmpdir-prefix ./.cwl-tmp/ --tmp-outdir-prefix ./.cwl-out/ \
-    --outdir outputs/ fragpipe.cwl params/fragpipe-raw-inputs.yml
+```
+source_dir/
+├── experiment_1/
+│   ├── sample_001.raw
+│   ├── sample_002.raw
+│   └── annotation.txt        (optional, for TMT workflows)
+├── experiment_2/
+│   ├── sample_003.raw
+│   └── sample_004.raw
 ```
 
-The workflow will automatically detect the input file type and process accordingly:
-- **.raw files** → Convert using msconvert → Run FragPipe
-- **.mzML.gz files** → Decompress → Run FragPipe  
-- **.mzML files** → Copy → Run FragPipe
+#### Step 2: Create a Manifest File
 
-See [`params/fragpipe-inputs.yml`](params/fragpipe-inputs.yml) for mzML example and [`params/fragpipe-raw-inputs.yml`](params/fragpipe-raw-inputs.yml) for .raw file example.
+Create a manifest file (`.fp-manifest`) listing the files to process. See [Input Manifest Examples](#input-manifest-examples) section for detailed examples and format requirements.
+
+Brief format:
+```
+dummy	sample_001		DDA
+dummy	sample_002		DDA
+```
+
+Column 2 must match your filenames (without extensions). Column 1 is not used by the workflow.
+
+#### Step 3: Prepare Input Parameters
+
+Create a parameters YAML file. Choose one based on your file type:
+
+**For .mzML files (params/myworkflow-inputs.yml):**
+```yaml
+query_fasta:
+  class: File
+  path: $(pwd)/data/custom_filtered.fasta
+
+uniprot_canonical_fasta:
+  class: File
+  path: $(pwd)/data/references/UP000005640_9606.fasta.gz
+
+workflow_file:
+  class: File
+  path: $(pwd)/data/HOPEproteome_TMT11workflow.workflow
+
+manifest_file:
+  class: File
+  path: $(pwd)/manifest.fp-manifest
+
+mzml_source_dir:
+  class: Directory
+  path: /path/to/source_dir
+
+input_type: "mzml"
+
+output_basename: "SAMPLE001"
+
+run_subset: false
+subset_pattern: ""
+```
+
+**For .raw files:**
+```yaml
+query_fasta:
+  class: File
+  path: $(pwd)/data/custom_filtered.fasta
+
+uniprot_canonical_fasta:
+  class: File
+  path: $(pwd)/data/references/UP000005640_9606.fasta.gz
+
+workflow_file:
+  class: File
+  path: $(pwd)/data/HOPEproteome_TMT11workflow.workflow
+
+manifest_file:
+  class: File
+  path: $(pwd)/manifest.fp-manifest
+
+mzml_source_dir:
+  class: Directory
+  path: /path/to/source_dir       # Directory with .raw files
+
+input_type: "raw"
+
+output_basename: "SAMPLE001"
+
+run_subset: false
+subset_pattern: ""
+```
+
+**For .mzML.gz files:**
+```yaml
+input_type: "mzml_gz"  # Change only this parameter
+# ... rest same as .mzML example
+```
+
+#### Step 4: Run Workflow
+
+Execute the workflow with your chosen parameters file. See [Complete Examples](#complete-examples) section below for specific commands.
+
+#### Step 5: Check Results
+
+After successful execution, outputs appear in the `outputs/` directory. See [Output Files](#output-files) section for detailed descriptions of each output file.
+
+### Complete Examples
+
+**Example 1: Process mzML files from HOPE study**
+```bash
+cwltool --leave-tmpdir --tmpdir-prefix ./.cwl-tmp/ \
+    --tmp-outdir-prefix ./.cwl-out/ \
+    --outdir outputs/ \
+    fragpipe.cwl params/fragpipe-hope-inputs.yml
+```
+
+**Example 2: Process raw files (auto-converted)**
+```bash
+cwltool --leave-tmpdir --tmpdir-prefix ./.cwl-tmp/ \
+    --tmp-outdir-prefix ./.cwl-out/ \
+    --outdir outputs/ \
+    fragpipe.cwl params/fragpipe-raw-inputs.yml
+```
+
+**Example 3: Process subset (N849 patient)**
+```bash
+# Edit params file to set:
+# - run_subset: true
+# - subset_pattern: "N849"
+# - output_basename: "HOPE_N849"
+
+cwltool --leave-tmpdir --tmpdir-prefix ./.cwl-tmp/ \
+    --tmp-outdir-prefix ./.cwl-out/ \
+    --outdir outputs/ \
+    fragpipe.cwl params/fragpipe-hope-inputs-N849.yml
+```
 
 ### Cavatica Platform Execution
 
@@ -109,6 +233,86 @@ sbpack cavatica childrens-bti/impact-trial-cwl/fragpipe_cwl fragpipe-cavatica.cw
 
 Then configure and run via the Cavatica web interface.
 
+For parameter file examples, see [`params/fragpipe-inputs.yml`](params/fragpipe-inputs.yml) for mzML and [`params/fragpipe-raw-inputs.yml`](params/fragpipe-raw-inputs.yml) for .raw files.
+
+## Manifest File Specification
+
+### Overview
+
+The manifest file (`.fp-manifest`) is a tab-separated file that lists the mzML/raw files to be processed. The workflow handles manifest files differently depending on the stage:
+- **Input manifest**: Used only to identify which files to process
+- **Generated manifest**: Created automatically with correct file paths for FragPipe execution
+
+### File Format
+
+The manifest file has **4 tab-separated columns**:
+
+```
+<file_path>	<basename>	<annotation>	<data_type>
+```
+
+| Column | Name | Purpose | Example |
+|--------|------|---------|---------|
+| 1 | File Path | Deprecated/ignored by workflow (for reference only) | `/home/data/exp1/file1.mzML` |
+| 2 | Basename | **REQUIRED** - Used to find matching files in source directory | `file1` |
+| 3 | Annotation | Optional - Empty or annotation label | `` |
+| 4 | Data Type | Acquisition type: DDA, DIA, or PRM | `DDA` |
+
+### Important Notes
+
+1. **Column 1 is not used** - The workflow reads basenames from column 2 to locate files
+2. **Column 2 must match filenames exactly** (without extension)
+3. **Manifest is auto-regenerated** - A new manifest with correct full paths is created before FragPipe execution
+
+### Input Manifest Examples
+
+#### Basic Example (mzML or raw files)
+
+If your source directory contains:
+```
+source_dir/
+├── experiment_A/
+│   ├── sample_001.mzML  (or .raw or .mzML.gz)
+│   ├── sample_002.mzML
+├── experiment_B/
+│   ├── sample_003.mzML
+```
+
+Your manifest should be:
+```
+dummy	sample_001		DDA
+dummy	sample_002		DDA
+dummy	sample_003		DDA
+```
+
+#### Subset Processing Example
+
+To process only files in the `N849/` folder with `run_subset: true` and `subset_pattern: "N849"`:
+
+```
+source_dir/
+├── experiment_1/        ← Skipped
+│   └── file_1.mzML
+├── N849/                ← Processed
+│   ├── file_2.mzML
+│   └── file_3.mzML
+```
+
+Use the same manifest format; the workflow filters files based on the pattern.
+
+### Manifest Processing Flow
+
+```
+Input manifest (column 2)
+    ↓ Extract basenames
+Find matching files in source directory
+    ↓ Based on subset_pattern if enabled
+Copy/Convert to working directory
+    ↓
+Auto-generate new manifest with full local paths
+    ↓ Pass to FragPipe
+```
+
 ## Key Features
 
 | Feature | Description |
@@ -116,7 +320,7 @@ Then configure and run via the Cavatica web interface.
 | **Automatic Input Detection** | Detects .raw, .mzML.gz, or .mzML files and routes to appropriate converter |
 | **Raw File Support** | Converts Thermo Fisher .raw files using msconvert from ProteoWizard |
 | **Automatic Manifest Generation** | Creates FragPipe manifest from processed files, no manual manifest needed |
-| **Subset Processing** | Process only first experiment (01C prefix) via `run_subset: true` |
+| **Subset Processing** | Process only first experiment (subfolder name) via `run_subset: true` |
 | **TMT Annotation Support** | Automatically copies `annotation.txt` files from experiment directories |
 | **Dynamic FASTA Injection** | Workflow file updated at runtime with correct FASTA path |
 | **Writable mzML Directory** | Uses `InplaceUpdateRequirement` for FragPipe temporary files |
@@ -146,75 +350,6 @@ docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest .
 docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest
 ```
 
-## Tool Descriptions
-
-### detect-input-type.cwl
-Automatically detects input file type by examining the source directory for .raw, .mzML.gz, or .mzML files.
-
-**Outputs:**
-- `input_type`: String value of "raw", "mzml_gz", or "mzml"
-
-### msconvert-raw.cwl
-Converts Thermo Fisher .raw files to mzML format using msconvert from ProteoWizard.
-
-**Requirements:**
-- Docker image: `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses`
-- Uses wine to run Windows-based msconvert tool
-
-**Conversion Parameters:**
-- `--64`: Use 64-bit precision
-- `--zlib`: Compress output
-- `--filter "peakPicking"`: Centroid data if not already
-- `--filter "zeroSamples removeExtra 1-"`: Remove zero samples
-
-**Outputs:**
-- `mzml_directory`: Directory containing converted mzML files
-- `mzml_manifest`: FragPipe manifest file (`.fp-manifest` format)
-
-**Note:** Based on [Nesvilab/msconvert-scripts](https://github.com/Nesvilab/msconvert-scripts)
-
-### gunzip-mzml.cwl
-Decompresses gzipped mzML files from a mounted directory and generates a FragPipe-compatible manifest file. Supports subset processing (files in `/01C*/` directories only) and automatically copies TMT annotation files.
-
-**Outputs:**
-- `mzml_directory`: Directory containing decompressed mzML files
-- `mzml_file_list`: Simple text list of mzML file paths
-- `mzml_manifest`: FragPipe manifest file (`.fp-manifest` format)
-
-### copy-mzml.cwl
-Copies already uncompressed mzML files and generates a FragPipe manifest.
-
-**Outputs:**
-- `mzml_directory`: Directory containing copied mzML files
-- `mzml_file_list`: Simple text list of mzML file paths
-- `mzml_manifest`: FragPipe manifest file (`.fp-manifest` format)
-
-### philosopher-database.cwl
-Initializes a Philosopher workspace and adds decoys/contaminants from UniProt canonical database to the custom FASTA file.
-
-**Key Features:**
-- Uses hardcoded Philosopher binary path in container
-- Adds reversed decoys with `rev_` tag
-- Includes contaminant proteins
-
-### filter-canonical-peptides.cwl
-Extracts gene symbols from the custom FASTA and filters out canonical peptides annotated to those genes from the combined database.
-
-**Gene Sources:**
-- Splice event genes
-- SNV genes  
-- Arriba fusion genes
-- STAR fusion genes
-
-### fragpipe-headless.cwl
-Runs FragPipe in headless mode with specified workflow, manifest, and processed FASTA database.
-
-**Key Features:**
-- `InplaceUpdateRequirement` for writable mzML directory
-- Dynamic FASTA path injection via `sed` modification of workflow file
-- Writable HOME directory for FragPipe config/cache
-- Copies FragPipe installation to writable runtime directory
-
 ## Requirements
 
 - **CWL Runner**: cwltool 3.1+ (for CWL v1.2 support including `InplaceUpdateRequirement`)
@@ -232,43 +367,24 @@ Runs FragPipe in headless mode with specified workflow, manifest, and processed 
 - First-time conversion will take longer due to image download
 - By using this image, you agree to vendor licenses for Thermo Fisher raw file reading libraries
 
-## Troubleshooting
-
-### SBFS Mount Issues
-```bash
-# Check if mount is active
-mountpoint -q data/cavatica-data
-
-# Unmount if needed
-sbfs unmount data/cavatica-data
-
-# Remount
-bash scripts/sbfs-mount.sh harenzaj/proteomics data/cavatica-data
-```
-
-### FUSE Permission Errors
-Ensure `/etc/fuse.conf` contains:
-```
-user_allow_other
-```
-
-### FragPipe HOME Directory Errors
-The workflow automatically sets `HOME` to a writable location. If you see errors about `/home/rstudio/.config/FragPipe`, ensure:
-- `EnvVarRequirement` is properly set in `fragpipe-headless.cwl`
-- Docker container has write access to the working directory
-
-### Manifest File Errors
-The workflow generates the manifest automatically. The input `manifest_file` parameter is kept for backward compatibility but is not used - the generated manifest from `gunzip-mzml` step is used instead.
-
 ## Output Files
 
 FragPipe results are written to the specified output directory with the following structure:
+
 ```
 outputs/
-├── results_directory/          # Complete FragPipe output
-├── combined_protein.tsv        # Protein quantification (if available)
-├── combined_peptide.tsv        # Peptide quantification (if available)
-└── combined_ion.tsv            # Ion quantification (if available)
+├── SAMPLE001_combined_protein.tsv              # Protein quantification results
+├── SAMPLE001_combined_peptide.tsv              # Peptide quantification results
+├── SAMPLE001_combined_modified_peptide.tsv     # Modified peptide quantification
+├── SAMPLE001_combined_ion.tsv                  # Ion-level quantification
+├── SAMPLE001_fragger.params                    # MSFragger parameter file used
+├── SAMPLE001_fragpipe.workflow                 # Workflow configuration used
+├── SAMPLE001_fragpipe-files.fp-manifest        # Generated manifest (with full paths)
+├── SAMPLE001_experiment_annotation.tsv         # Experiment metadata
+├── SAMPLE001_sdrf.tsv                          # SDRF format metadata
+├── SAMPLE001_tmt-integrator-conf.yml           # TMT configuration (if applicable)
+├── SAMPLE001_tmt-report/                       # TMT quantification results (if applicable)
+└── SAMPLE001_log*.txt                          # Execution log
 ```
 
 ## Credits
@@ -282,8 +398,3 @@ This CWL workflow implementation is based on the [FragPipe](https://github.com/N
 
 For more information about FragPipe workflows and available analysis configurations, see the [workflows directory](https://github.com/Nesvilab/FragPipe/tree/develop/workflows) in the FragPipe repository.
 
-## Notes
-
-- The Docker image includes FragPipe 22.0 with all required tools
-- JAR files (MSFragger, IonQuant, diaTracer) must be copied during Docker build
-- Resource requirements are specified as hints for Cavatica platform optimization
