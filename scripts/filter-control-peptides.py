@@ -5,7 +5,9 @@ import pandas as pd
 
 def is_non_canonical(protein_series: pd.Series) -> pd.Series:
     values = protein_series.fillna("").astype(str).str.strip()
-    return ~(values.str.startswith("sp|") | values.str.startswith("tr|"))
+    is_decoy = values.str.startswith("rev_")
+    is_canonical = values.str.startswith("sp|") | values.str.startswith("tr|")
+    return ~is_decoy & ~is_canonical
 
 
 def main() -> None:
@@ -21,6 +23,8 @@ def main() -> None:
 
     filtered_output = f"{output_basename}_combined_peptide_control_filtered.tsv"
     summary_output = f"{output_basename}_control_overlap_summary.txt"
+    input_tumor_specific_output = f"{output_basename}_input_tumor_specific_peptides.tsv"
+    control_tumor_specific_output = f"{output_basename}_control_tumor_specific_peptides.tsv"
 
     peptide_col = "Peptide Sequence"
     protein_col = "Protein"
@@ -39,6 +43,7 @@ def main() -> None:
         .unique()
         .tolist()
     )
+    control_peptide_list = list(control_peptides)
 
     input_df = pd.read_csv(input_path, sep="\t", dtype=str, keep_default_na=False)
     if peptide_col not in input_df.columns or protein_col not in input_df.columns:
@@ -47,18 +52,37 @@ def main() -> None:
     input_protein = input_df[protein_col]
     input_tumor_mask = is_non_canonical(input_protein)
     input_peptides = input_df[peptide_col].astype(str).str.strip()
-    overlap_mask = input_peptides.ne("") & input_peptides.isin(control_peptides)
+    input_tumor_specific_mask = input_tumor_mask & input_peptides.ne("")
+    overlap_mask = pd.Series(False, index=input_df.index)
+    candidate_mask = input_tumor_specific_mask
+
+    for idx, peptide in input_peptides.loc[candidate_mask].items():
+        has_overlap = any(
+            peptide == control_peptide
+            or peptide in control_peptide
+            or control_peptide in peptide
+            for control_peptide in control_peptide_list
+        )
+        if has_overlap:
+            overlap_mask.at[idx] = True
 
     keep_mask = input_tumor_mask & ~overlap_mask
     filtered_df = input_df.loc[keep_mask].copy()
     filtered_df.to_csv(filtered_output, sep="\t", index=False)
+    input_df.loc[input_tumor_specific_mask].copy().to_csv(
+        input_tumor_specific_output, sep="\t", index=False
+    )
 
     input_total_peptides = int(input_peptides.ne("").sum())
     input_tumor_specific_peptides = int((input_tumor_mask & input_peptides.ne("")).sum())
 
     control_peptide_series = control_df[peptide_col].astype(str).str.strip()
+    control_tumor_specific_mask = control_tumor_mask & control_peptide_series.ne("")
+    control_df.loc[control_tumor_specific_mask].copy().to_csv(
+        control_tumor_specific_output, sep="\t", index=False
+    )
     control_total_peptides = int(control_peptide_series.ne("").sum())
-    control_tumor_specific_peptides = int((control_tumor_mask & control_peptide_series.ne("")).sum())
+    control_tumor_specific_peptides = int(control_tumor_specific_mask.sum())
 
     removed_rows = int((input_tumor_mask & overlap_mask).sum())
     kept_rows = int(keep_mask.sum())
@@ -76,6 +100,8 @@ def main() -> None:
         summary_handle.write(f"final_peptides_left\t{kept_rows}\n")
 
     print(f"Filtered combined peptide file: {filtered_output}")
+    print(f"Input tumor-specific peptides file: {input_tumor_specific_output}")
+    print(f"Control tumor-specific peptides file: {control_tumor_specific_output}")
     print(f"Summary: {summary_output}")
 
 

@@ -82,6 +82,16 @@ outputs:
     outputSource: filter_control_peptides/filtered_combined_peptide
     doc: Optional combined peptide output with control-overlap filtering applied
 
+  input_tumor_specific_peptides:
+    type: File?
+    outputSource: filter_control_peptides/input_tumor_specific_peptides
+    doc: Optional input-run tumor-specific peptide rows (non-canonical, non-decoy)
+
+  control_tumor_specific_peptides:
+    type: File?
+    outputSource: filter_control_peptides/control_tumor_specific_peptides
+    doc: Optional control-run tumor-specific peptide rows (non-canonical, non-decoy)
+
   control_overlap_summary:
     type: File?
     outputSource: filter_control_peptides/control_overlap_summary
@@ -233,6 +243,8 @@ steps:
       output_basename: output_basename
     out:
       - filtered_combined_peptide
+      - input_tumor_specific_peptides
+      - control_tumor_specific_peptides
       - control_overlap_summary
 
 

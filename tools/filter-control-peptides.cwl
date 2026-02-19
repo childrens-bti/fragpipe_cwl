@@ -5,7 +5,7 @@ label: Filter Peptides Present In Control
 doc: |
   Keep tumor-specific peptide rows by excluding canonical Protein entries
   (sp| or tr| in the Protein column), then remove rows whose peptide sequence
-  is also present in a control combined_peptide.tsv reference.
+  exactly matches or is contained in a control combined_peptide.tsv reference.
 
 baseCommand: [python3, /opt/scripts/filter-control-peptides.py]
 
@@ -43,6 +43,18 @@ outputs:
     outputBinding:
       glob: "$(inputs.output_basename)_combined_peptide_control_filtered.tsv"
     doc: Tumor-specific combined peptide table after removing peptides found in control
+
+  input_tumor_specific_peptides:
+    type: File
+    outputBinding:
+      glob: "$(inputs.output_basename)_input_tumor_specific_peptides.tsv"
+    doc: Input-run tumor-specific peptide rows (non-canonical, non-decoy)
+
+  control_tumor_specific_peptides:
+    type: File
+    outputBinding:
+      glob: "$(inputs.output_basename)_control_tumor_specific_peptides.tsv"
+    doc: Control-run tumor-specific peptide rows (non-canonical, non-decoy)
 
   control_overlap_summary:
     type: File
