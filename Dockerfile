@@ -68,7 +68,7 @@ RUN ln -s /usr/local/bin/python3.11 /usr/local/bin/python3 && \
 RUN python3 -m pip install --upgrade pip
 RUN pip uninstall easypqp \
     && pip install git+https://github.com/grosenberger/easypqp.git@master \
-    && pip install lxml
+    && pip install lxml pandas
 
 # Create FragPipe directory structure
 RUN mkdir -p /fragpipe_bin/tools /fragpipe_bin/tmp /fragpipe_bin/refs \
