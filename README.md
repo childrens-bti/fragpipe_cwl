@@ -13,6 +13,7 @@ fragpipe_cwl/
 │   ├── msconvert-raw.cwl             # Convert .raw to .mzML using msconvert
 │   ├── philosopher-database.cwl      # Add decoys/contaminants to FASTA
 │   ├── filter-canonical-peptides.cwl # Filter canonical peptides by gene symbols
+│   ├── filter-control-peptides.cwl   # Optional control-overlap peptide filtering
 │   ├── gunzip-mzml.cwl               # Decompress mzML files and generate manifest
 │   ├── copy-mzml.cwl                 # Copy uncompressed mzML files
 │   └── fragpipe-headless.cwl         # Main FragPipe execution
@@ -21,6 +22,7 @@ fragpipe_cwl/
 │   ├── msconvert-raw.sh              # Raw file conversion with msconvert
 │   ├── philosopher-database.sh       # Philosopher workspace and database prep
 │   ├── filter-canonical-peptides.sh  # Gene symbol extraction and filtering
+│   ├── filter-control-peptides.py    # Control-overlap peptide filtering logic
 │   ├── gunzip-mzml.sh                # mzML decompression with TMT annotation support
 │   ├── copy-mzml.sh                  # Copy mzML files with manifest generation
 │   ├── fragpipe-headless.sh          # FragPipe headless execution
@@ -50,6 +52,7 @@ FragPipe supports a comprehensive set of workflow configurations available in th
 2. **Prepare database**: Add decoys and contaminants to custom FASTA using Philosopher
 3. **Filter canonical peptides**: Remove canonical peptides by gene symbols
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
+5. **Optional control-overlap filtering**: Keep non-canonical, non-decoy peptides and remove overlap with control peptides (exact match or containment)
 
 See [Key Features](#key-features) section below for complete feature list.
 
@@ -144,6 +147,11 @@ mzml_source_dir:
 input_type: "mzml"
 
 output_basename: "SAMPLE001"
+
+# Optional: control-run peptide table for overlap filtering
+control_combined_peptide:
+  class: File
+  path: $(pwd)/data/control_combined_peptide.tsv
 
 run_subset: false
 subset_pattern: ""
@@ -375,6 +383,10 @@ FragPipe results are written to the specified output directory with the followin
 outputs/
 ├── SAMPLE001_combined_protein.tsv              # Protein quantification results
 ├── SAMPLE001_combined_peptide.tsv              # Peptide quantification results
+├── SAMPLE001_combined_peptide_control_filtered.tsv # Tumor-specific peptides after control overlap filtering (optional)
+├── SAMPLE001_input_tumor_specific_peptides.tsv     # Input tumor-specific peptide rows (non-canonical, non-decoy; optional)
+├── SAMPLE001_control_tumor_specific_peptides.tsv   # Control tumor-specific peptide rows (non-canonical, non-decoy; optional)
+├── SAMPLE001_control_overlap_summary.txt           # Control-overlap filtering summary (optional)
 ├── SAMPLE001_combined_modified_peptide.tsv     # Modified peptide quantification
 ├── SAMPLE001_combined_ion.tsv                  # Ion-level quantification
 ├── SAMPLE001_fragger.params                    # MSFragger parameter file used
