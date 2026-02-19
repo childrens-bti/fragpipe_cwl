@@ -122,6 +122,36 @@ Column 2 must match your filenames (without extensions). Column 1 is not used by
 
 Create a parameters YAML file. Choose one based on your file type:
 
+#### Understanding `custom_filtered.fasta` Input IDs
+
+The `query_fasta` input (commonly `data/custom_filtered.fasta`) contains tumor-specific peptide/protein entries translated from multiple variant sources. Header IDs encode source type and metadata.
+
+Common header types and examples:
+
+- **SNV/Indel-derived IDs** (multiple subtypes in one file)
+  - `missense_mutation|BS_1CZPVCXR:BS_YVRSCEC6|CHD5|ENSG00000116254|ENST00000262450|ENSP00000262450|c.4601C>A|p.P1534H|peptMutPos=1534`
+  - `nonsense_mutation|BS_1CZPVCXR:BS_YVRSCEC6|EPHA6|ENSG00000080224|ENST00000389672|ENSP00000374323|c.1918G>T|p.G640*|peptMutPos=640`
+  - `frame_shift_del|BS_1CZPVCXR:BS_YVRSCEC6|ZSWIM5|ENSG00000162415|ENST00000359600|ENSP00000352614|c.481del|p.S161Pfs*42|peptMutPos=161`
+  - `frame_shift_ins|BS_1CZPVCXR:BS_YVRSCEC6|ZNF534|ENSG00000198633|ENST00000433050|ENSP00000391358|c.1030_1031insGG|p.H344Rfs*88|peptMutPos=344`
+  - `in_frame_del|BS_1CZPVCXR:BS_YVRSCEC6|UBC|ENSG00000150991|ENST00000339647|ENSP00000344818|c.609_611del|p.E203del|peptMutPos=203`
+
+- **STAR-fusion IDs**
+  - `star_fusion|MFSD14B--RTF2|MFSD14B^ENSG00000148110.17|chr9:94446936:+|RTF2^ENSG00000022277.13|chr20:56513315:+|leftCDS_id:ENST00000375344.8|1-843|rightCDS_id:ENST00000357348.10|478-921|INFRAME|Protein_fusion_site:281`
+
+- **Arriba-fusion IDs**
+  - `arriba_fusion|PTCH1--FANCC|PTCH1|chr9:95453478|ENST00000437951.6|FANCC|chr9:95411677|.|out-of-frame|Protein_fusion_site:65`
+
+- **Splice-event IDs**
+  - `chr17:76467717-76467727_76468671-76468909_AANAT_phase0`
+
+Field notes:
+
+- `ENSG...` = gene ID, `ENST...` = transcript ID, `ENSP...` = protein ID
+- `c.` fields are coding-DNA changes (HGVS-like), `p.` fields are protein changes
+- `peptMutPos=<N>` marks mutation position used in peptide/protein context
+- `Protein_fusion_site:<N>` is the amino-acid fusion junction position
+- `phase0/1/2` indicates translation frame for splice-junction-derived entries
+
 **For .mzML files (params/myworkflow-inputs.yml):**
 ```yaml
 query_fasta:
