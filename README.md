@@ -442,6 +442,40 @@ outputs/
 - `tumor_specific_overlap_filtered`
 - `final_peptides_left`
 
+### Major Control-Filter Outputs (How to Read Them)
+
+For runs with `control_combined_peptide` enabled, these are the main files to review in order:
+
+1. `SAMPLE001_combined_peptide.tsv`
+  - Full peptide-level FragPipe result before optional control filtering.
+  - Use as the baseline population (`input_total_peptides`).
+
+2. `SAMPLE001_input_tumor_specific_peptides.tsv`
+  - Input tumor-specific set after gating:
+    - non-canonical / non-decoy (`Protein` not starting with `sp|`, `tr|`, `rev_`),
+    - non-empty peptide sequence,
+    - mutation-position overlap when present (`Start`-`End` overlaps `peptMutPos` or `Protein_fusion_site`),
+    - splice-derived IDs (junction and target forms with `phase0/1/2`) are exempt from mutation-position gating.
+
+3. `SAMPLE001_control_tumor_specific_peptides.tsv`
+  - Control tumor-specific set built with the same gating logic as input.
+  - This is the reference set used for overlap removal.
+
+4. `SAMPLE001_combined_peptide_control_filtered.tsv`
+  - Final kept peptides: input tumor-specific peptides after removing overlap with control tumor-specific peptides.
+  - Overlap definition is: exact match OR containment (`A==B`, `A in B`, or `B in A`).
+
+5. `SAMPLE001_control_overlap_summary.txt`
+  - Audit trail for the filtering flow:
+    - starting totals (`input_total_peptides`, `control_total_peptides`),
+    - tumor-specific counts after gating (`input_tumor_specific_peptides`, `control_tumor_specific_peptides`),
+    - rows removed by mutation-position gating,
+    - rows removed by control overlap,
+    - final retained count (`final_peptides_left`).
+
+Recommended validation check:
+- `final_peptides_left = input_tumor_specific_peptides - tumor_specific_overlap_filtered`
+
 ## Credits
 
 This CWL workflow implementation is based on the [FragPipe](https://github.com/Nesvilab/FragPipe) pipeline developed by [Nesvilab](https://github.com/Nesvilab). FragPipe provides an integrated environment for MS/MS proteomics data analysis and includes the following components:
