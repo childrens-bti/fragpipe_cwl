@@ -52,7 +52,7 @@ FragPipe supports a comprehensive set of workflow configurations available in th
 2. **Prepare database**: Add decoys and contaminants to custom FASTA using Philosopher
 3. **Filter canonical peptides**: Remove canonical peptides by gene symbols
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
-5. **Optional control-overlap filtering**: Keep non-canonical, non-decoy peptides and remove overlap with control peptides (exact match or containment)
+5. **Optional control-overlap filtering**: Build tumor-specific input/control sets from non-canonical, non-decoy peptides, apply mutation-position overlap gating (`peptMutPos` / `Protein_fusion_site`; splice IDs exempt), then remove input peptides overlapping control peptides (exact match or containment)
 
 See [Key Features](#key-features) section below for complete feature list.
 
@@ -143,6 +143,7 @@ Common header types and examples:
 
 - **Splice-event IDs**
   - `chr17:76467717-76467727_76468671-76468909_AANAT_phase0`
+  - `chr12:122939864_122940284_ABCB9_phase1`
 
 Field notes:
 
@@ -150,7 +151,7 @@ Field notes:
 - `c.` fields are coding-DNA changes (HGVS-like), `p.` fields are protein changes
 - `peptMutPos=<N>` marks mutation position used in peptide/protein context
 - `Protein_fusion_site:<N>` is the amino-acid fusion junction position
-- `phase0/1/2` indicates translation frame for splice-junction-derived entries
+- `phase0/1/2` indicates translation frame for splice-derived entries (junction or target)
 
 **For .mzML files (params/myworkflow-inputs.yml):**
 ```yaml
@@ -361,6 +362,7 @@ Auto-generate new manifest with full local paths
 | **Subset Processing** | Process only first experiment (subfolder name) via `run_subset: true` |
 | **TMT Annotation Support** | Automatically copies `annotation.txt` files from experiment directories |
 | **Dynamic FASTA Injection** | Workflow file updated at runtime with correct FASTA path |
+| **Mutation-Position Gating** | Optional control filter keeps variant/fusion peptides only when peptide `Start`-`End` overlaps `peptMutPos` or `Protein_fusion_site` (splice IDs exempt) |
 | **Writable mzML Directory** | Uses `InplaceUpdateRequirement` for FragPipe temporary files |
 | **Hardcoded Binary Paths** | No PATH dependencies, uses absolute paths to Philosopher and FragPipe |
 | **SBFS Mount Support** | Direct mounting of Cavatica projects for local execution |
@@ -413,10 +415,10 @@ FragPipe results are written to the specified output directory with the followin
 outputs/
 ├── SAMPLE001_combined_protein.tsv              # Protein quantification results
 ├── SAMPLE001_combined_peptide.tsv              # Peptide quantification results
-├── SAMPLE001_combined_peptide_control_filtered.tsv # Tumor-specific peptides after control overlap filtering (optional)
-├── SAMPLE001_input_tumor_specific_peptides.tsv     # Input tumor-specific peptide rows (non-canonical, non-decoy; optional)
-├── SAMPLE001_control_tumor_specific_peptides.tsv   # Control tumor-specific peptide rows (non-canonical, non-decoy; optional)
-├── SAMPLE001_control_overlap_summary.txt           # Control-overlap filtering summary (optional)
+├── SAMPLE001_combined_peptide_control_filtered.tsv # Input tumor-specific peptides after control overlap filtering (optional)
+├── SAMPLE001_input_tumor_specific_peptides.tsv     # Input tumor-specific rows after mutation-position gating (optional)
+├── SAMPLE001_control_tumor_specific_peptides.tsv   # Control tumor-specific rows after mutation-position gating (optional)
+├── SAMPLE001_control_overlap_summary.txt           # Control-filter summary including mutation/overlap counts (optional)
 ├── SAMPLE001_combined_modified_peptide.tsv     # Modified peptide quantification
 ├── SAMPLE001_combined_ion.tsv                  # Ion-level quantification
 ├── SAMPLE001_fragger.params                    # MSFragger parameter file used
@@ -428,6 +430,17 @@ outputs/
 ├── SAMPLE001_tmt-report/                       # TMT quantification results (if applicable)
 └── SAMPLE001_log*.txt                          # Execution log
 ```
+
+`SAMPLE001_control_overlap_summary.txt` includes:
+
+- `input_total_peptides`
+- `input_tumor_specific_peptides`
+- `control_total_peptides`
+- `control_tumor_specific_peptides`
+- `tumor_specific_filtered_by_mutation_position`
+- `control_tumor_specific_filtered_by_mutation_position`
+- `tumor_specific_overlap_filtered`
+- `final_peptides_left`
 
 ## Credits
 
