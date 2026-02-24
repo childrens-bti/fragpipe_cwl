@@ -4,7 +4,7 @@
 # FASTA files
 query_fasta:
   class: File
-  path: ../data/BA_RV4HJE2C_BA_EBEMAETC_97fea390-91d5-42ab-a5e0-1fd83fdd9e9b_tumor_specific_filtered.fasta
+  path: /home/ubuntu/impact_trial_cwl/outputs/impact002/BA_RV4HJE2C_BA_EBEMAETC_taskid_tumor_specific_filtered.fasta
 
 uniprot_canonical_fasta:
   class: File
@@ -36,4 +36,4 @@ output_basename: "IMPACT002-Run1"
 # Optional control peptide table for overlap filtering
 control_combined_peptide:
   class: File
-  path: ../data/Control_vs_IMPACT002_3e0d8c60-66a1-4678-ae7f-d3c04e1b4558_combined_peptide.tsv
+  path: ../outputs/GtexFilter_impact-trial-Controls/Control_vs_IMPACT002_combined_peptide.tsv

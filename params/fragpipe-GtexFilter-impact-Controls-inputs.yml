@@ -1,7 +1,6 @@
-# FragPipe IMPACT002-Run2 input parameters
-# Aligned to fragpipe.cwl (includes optional control peptide filtering)
+# FragPipe five normal cerebellum control input parameters
 
-# FASTA files
+# FASTA files (predicted peptides from impact_trial_cwl tumor-specific filtering)
 query_fasta:
   class: File
   path: /home/ubuntu/impact_trial_cwl/outputs/impact002/BA_RV4HJE2C_BA_EBEMAETC_taskid_tumor_specific_filtered.fasta
@@ -17,12 +16,12 @@ workflow_file:
 
 manifest_file:
   class: File
-  path: ../data/impact002-run2.fp-manifest.txt
+  path: ../data/nc.fp-manifest.txt
 
 # mzML source directory (already-converted mzML files)
 mzml_source_dir:
   class: Directory
-  path: /home/ubuntu/fragpipe_cwl/data/IMPACT002-Run2_mzmls/
+  path: /home/ubuntu/fragpipe_cwl/data/bti-private-us-east-1-prd-impact-trial/source/
 
 # Input type specification
 input_type: "mzml"  # one of: raw, mzml_gz, mzml
@@ -31,9 +30,5 @@ run_subset: false
 subset_pattern: ""
 
 # Base name for all output files
-output_basename: "IMPACT002-Run2"
+output_basename: "Control_vs_IMPACT002"
 
-# Optional control peptide table for overlap filtering
-control_combined_peptide:
-  class: File
-  path: ../outputs/GtexFilter_impact-trial-Controls/Control_vs_IMPACT002_combined_peptide.tsv

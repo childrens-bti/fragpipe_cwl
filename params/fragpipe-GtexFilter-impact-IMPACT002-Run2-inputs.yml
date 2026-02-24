@@ -4,7 +4,7 @@
 # FASTA files
 query_fasta:
   class: File
-  path: /home/ubuntu/impact_trial_cwl/outputs/impact002/BA_RV4HJE2C_BA_EBEMAETC_taskid_tumor_specific_filtered.fasta
+  path: ../data/BA_RV4HJE2C_BA_EBEMAETC_97fea390-91d5-42ab-a5e0-1fd83fdd9e9b_tumor_specific_filtered.fasta
 
 uniprot_canonical_fasta:
   class: File
@@ -13,7 +13,7 @@ uniprot_canonical_fasta:
 # FragPipe configuration files
 workflow_file:
   class: File
-  path: ../data/impact002-LFQ-MBR.workflow.txt
+  path: ../data/impact002-LFQ-MBR.fdr0.1.workflow.txt
 
 manifest_file:
   class: File
@@ -22,7 +22,7 @@ manifest_file:
 # mzML source directory (already-converted mzML files)
 mzml_source_dir:
   class: Directory
-  path: /home/ubuntu/fragpipe_cwl/data/IMPACT002-Run2_mzmls/
+  path: /home/ubuntu/fragpipe_cwl/data/IMPACT002-Run2_mzmls
 
 # Input type specification
 input_type: "mzml"  # one of: raw, mzml_gz, mzml
@@ -36,4 +36,4 @@ output_basename: "IMPACT002-Run2"
 # Optional control peptide table for overlap filtering
 control_combined_peptide:
   class: File
-  path: ../outputs/GtexFilter_impact-trial-Controls/Control_vs_IMPACT002_combined_peptide.tsv
+  path: ../data/Control_vs_IMPACT002_3e0d8c60-66a1-4678-ae7f-d3c04e1b4558_combined_peptide.tsv

@@ -154,7 +154,6 @@ def main() -> None:
     input_df.loc[input_tumor_specific_mask].copy().to_csv(
         input_tumor_specific_output, sep="\t", index=False
     )
-
     input_total_peptides = int(input_peptides.ne("").sum())
     input_tumor_specific_peptides = int(input_tumor_specific_mask.sum())
 
@@ -167,12 +166,6 @@ def main() -> None:
 
     removed_rows = int((input_tumor_specific_mask & overlap_mask).sum())
     kept_rows = int(keep_mask.sum())
-    removed_by_mutation_position = int(
-        (input_tumor_base_mask & ~mutation_overlap_mask).sum()
-    )
-    control_removed_by_mutation_position = int(
-        (control_tumor_base_mask & ~control_mutation_overlap_mask).sum()
-    )
 
     with open(summary_output, "w") as summary_handle:
         summary_handle.write(f"input_total_peptides\t{input_total_peptides}\n")
@@ -182,12 +175,6 @@ def main() -> None:
         summary_handle.write(f"control_total_peptides\t{control_total_peptides}\n")
         summary_handle.write(
             f"control_tumor_specific_peptides\t{control_tumor_specific_peptides}\n"
-        )
-        summary_handle.write(
-            f"tumor_specific_filtered_by_mutation_position\t{removed_by_mutation_position}\n"
-        )
-        summary_handle.write(
-            f"control_tumor_specific_filtered_by_mutation_position\t{control_removed_by_mutation_position}\n"
         )
         summary_handle.write(f"tumor_specific_overlap_filtered\t{removed_rows}\n")
         summary_handle.write(f"final_peptides_left\t{kept_rows}\n")
