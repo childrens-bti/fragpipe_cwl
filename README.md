@@ -13,6 +13,7 @@ fragpipe_cwl/
 │   ├── msconvert-raw.cwl             # Convert .raw to .mzML using msconvert
 │   ├── philosopher-database.cwl      # Add decoys/contaminants to FASTA
 │   ├── filter-canonical-peptides.cwl # Filter canonical peptides by gene symbols
+│   ├── filter-control-peptides.cwl   # Optional control-overlap peptide filtering
 │   ├── gunzip-mzml.cwl               # Decompress mzML files and generate manifest
 │   ├── copy-mzml.cwl                 # Copy uncompressed mzML files
 │   └── fragpipe-headless.cwl         # Main FragPipe execution
@@ -21,6 +22,7 @@ fragpipe_cwl/
 │   ├── msconvert-raw.sh              # Raw file conversion with msconvert
 │   ├── philosopher-database.sh       # Philosopher workspace and database prep
 │   ├── filter-canonical-peptides.sh  # Gene symbol extraction and filtering
+│   ├── filter-control-peptides.py    # Control-overlap peptide filtering logic
 │   ├── gunzip-mzml.sh                # mzML decompression with TMT annotation support
 │   ├── copy-mzml.sh                  # Copy mzML files with manifest generation
 │   ├── fragpipe-headless.sh          # FragPipe headless execution
@@ -50,6 +52,7 @@ FragPipe supports a comprehensive set of workflow configurations available in th
 2. **Prepare database**: Add decoys and contaminants to custom FASTA using Philosopher
 3. **Filter canonical peptides**: Remove canonical peptides by gene symbols
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
+5. **Optional control-overlap filtering**: Build tumor-specific input/control sets from non-canonical, non-decoy peptides, apply mutation-position overlap gating (`peptMutPos` / `Protein_fusion_site`; splice IDs exempt), then remove input peptides overlapping control peptides (exact match or containment)
 
 See [Key Features](#key-features) section below for complete feature list.
 
@@ -119,6 +122,37 @@ Column 2 must match your filenames (without extensions). Column 1 is not used by
 
 Create a parameters YAML file. Choose one based on your file type:
 
+#### Understanding `custom_filtered.fasta` Input IDs
+
+The `query_fasta` input (commonly `data/custom_filtered.fasta`) contains tumor-specific peptide/protein entries translated from multiple variant sources. Header IDs encode source type and metadata.
+
+Common header types and examples:
+
+- **SNV/Indel-derived IDs** (multiple subtypes in one file)
+  - `missense_mutation|BS_1CZPVCXR:BS_YVRSCEC6|CHD5|ENSG00000116254|ENST00000262450|ENSP00000262450|c.4601C>A|p.P1534H|peptMutPos=1534`
+  - `nonsense_mutation|BS_1CZPVCXR:BS_YVRSCEC6|EPHA6|ENSG00000080224|ENST00000389672|ENSP00000374323|c.1918G>T|p.G640*|peptMutPos=640`
+  - `frame_shift_del|BS_1CZPVCXR:BS_YVRSCEC6|ZSWIM5|ENSG00000162415|ENST00000359600|ENSP00000352614|c.481del|p.S161Pfs*42|peptMutPos=161`
+  - `frame_shift_ins|BS_1CZPVCXR:BS_YVRSCEC6|ZNF534|ENSG00000198633|ENST00000433050|ENSP00000391358|c.1030_1031insGG|p.H344Rfs*88|peptMutPos=344`
+  - `in_frame_del|BS_1CZPVCXR:BS_YVRSCEC6|UBC|ENSG00000150991|ENST00000339647|ENSP00000344818|c.609_611del|p.E203del|peptMutPos=203`
+
+- **STAR-fusion IDs**
+  - `star_fusion|MFSD14B--RTF2|MFSD14B^ENSG00000148110.17|chr9:94446936:+|RTF2^ENSG00000022277.13|chr20:56513315:+|leftCDS_id:ENST00000375344.8|1-843|rightCDS_id:ENST00000357348.10|478-921|INFRAME|Protein_fusion_site:281`
+
+- **Arriba-fusion IDs**
+  - `arriba_fusion|PTCH1--FANCC|PTCH1|chr9:95453478|ENST00000437951.6|FANCC|chr9:95411677|.|out-of-frame|Protein_fusion_site:65`
+
+- **Splice-event IDs**
+  - `chr17:76467717-76467727_76468671-76468909_AANAT_phase0`
+  - `chr12:122939864_122940284_ABCB9_phase1`
+
+Field notes:
+
+- `ENSG...` = gene ID, `ENST...` = transcript ID, `ENSP...` = protein ID
+- `c.` fields are coding-DNA changes (HGVS-like), `p.` fields are protein changes
+- `peptMutPos=<N>` marks mutation position used in peptide/protein context
+- `Protein_fusion_site:<N>` is the amino-acid fusion junction position
+- `phase0/1/2` indicates translation frame for splice-derived entries (junction or target)
+
 **For .mzML files (params/myworkflow-inputs.yml):**
 ```yaml
 query_fasta:
@@ -144,6 +178,11 @@ mzml_source_dir:
 input_type: "mzml"
 
 output_basename: "SAMPLE001"
+
+# Optional: control-run peptide table for overlap filtering
+control_combined_peptide:
+  class: File
+  path: $(pwd)/data/control_combined_peptide.tsv
 
 run_subset: false
 subset_pattern: ""
@@ -323,6 +362,7 @@ Auto-generate new manifest with full local paths
 | **Subset Processing** | Process only first experiment (subfolder name) via `run_subset: true` |
 | **TMT Annotation Support** | Automatically copies `annotation.txt` files from experiment directories |
 | **Dynamic FASTA Injection** | Workflow file updated at runtime with correct FASTA path |
+| **Mutation-Position Gating** | Optional control filter keeps variant/fusion peptides only when peptide `Start`-`End` overlaps `peptMutPos` or `Protein_fusion_site` (splice IDs exempt) |
 | **Writable mzML Directory** | Uses `InplaceUpdateRequirement` for FragPipe temporary files |
 | **Hardcoded Binary Paths** | No PATH dependencies, uses absolute paths to Philosopher and FragPipe |
 | **SBFS Mount Support** | Direct mounting of Cavatica projects for local execution |
@@ -375,6 +415,10 @@ FragPipe results are written to the specified output directory with the followin
 outputs/
 ├── SAMPLE001_combined_protein.tsv              # Protein quantification results
 ├── SAMPLE001_combined_peptide.tsv              # Peptide quantification results
+├── SAMPLE001_combined_peptide_control_filtered.tsv # Input tumor-specific peptides after control overlap filtering (optional)
+├── SAMPLE001_input_tumor_specific_peptides.tsv     # Input tumor-specific rows after mutation-position gating (optional)
+├── SAMPLE001_control_tumor_specific_peptides.tsv   # Control tumor-specific rows after mutation-position gating (optional)
+├── SAMPLE001_control_overlap_summary.txt           # Control-filter summary including mutation/overlap counts (optional)
 ├── SAMPLE001_combined_modified_peptide.tsv     # Modified peptide quantification
 ├── SAMPLE001_combined_ion.tsv                  # Ion-level quantification
 ├── SAMPLE001_fragger.params                    # MSFragger parameter file used
@@ -386,6 +430,51 @@ outputs/
 ├── SAMPLE001_tmt-report/                       # TMT quantification results (if applicable)
 └── SAMPLE001_log*.txt                          # Execution log
 ```
+
+`SAMPLE001_control_overlap_summary.txt` includes:
+
+- `input_total_peptides`
+- `input_tumor_specific_peptides`
+- `control_total_peptides`
+- `control_tumor_specific_peptides`
+- `tumor_specific_filtered_by_mutation_position`
+- `control_tumor_specific_filtered_by_mutation_position`
+- `tumor_specific_overlap_filtered`
+- `final_peptides_left`
+
+### Major Control-Filter Outputs (How to Read Them)
+
+For runs with `control_combined_peptide` enabled, these are the main files to review in order:
+
+1. `SAMPLE001_combined_peptide.tsv`
+  - Full peptide-level FragPipe result before optional control filtering.
+  - Use as the baseline population (`input_total_peptides`).
+
+2. `SAMPLE001_input_tumor_specific_peptides.tsv`
+  - Input tumor-specific set after gating:
+    - non-canonical / non-decoy (`Protein` not starting with `sp|`, `tr|`, `rev_`),
+    - non-empty peptide sequence,
+    - mutation-position overlap when present (`Start`-`End` overlaps `peptMutPos` or `Protein_fusion_site`),
+    - splice-derived IDs (junction and target forms with `phase0/1/2`) are exempt from mutation-position gating.
+
+3. `SAMPLE001_control_tumor_specific_peptides.tsv`
+  - Control tumor-specific set built with the same gating logic as input.
+  - This is the reference set used for overlap removal.
+
+4. `SAMPLE001_combined_peptide_control_filtered.tsv`
+  - Final kept peptides: input tumor-specific peptides after removing overlap with control tumor-specific peptides.
+  - Overlap definition is: exact match OR containment (`A==B`, `A in B`, or `B in A`).
+
+5. `SAMPLE001_control_overlap_summary.txt`
+  - Audit trail for the filtering flow:
+    - starting totals (`input_total_peptides`, `control_total_peptides`),
+    - tumor-specific counts after gating (`input_tumor_specific_peptides`, `control_tumor_specific_peptides`),
+    - rows removed by mutation-position gating,
+    - rows removed by control overlap,
+    - final retained count (`final_peptides_left`).
+
+Recommended validation check:
+- `final_peptides_left = input_tumor_specific_peptides - tumor_specific_overlap_filtered`
 
 ## Credits
 

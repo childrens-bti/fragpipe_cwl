@@ -11,15 +11,23 @@ if [ "$CURRENT_UID" = "1000" ] && [ "$WINEPREFIX_OWNER" = "1000" ]; then
   # Local EC2: user is 1000 and owns /wineprefix64
   export WINEPREFIX=/wineprefix64
 else
-  # Cavatica or different user: copy /wineprefix64 to /tmp
-  echo "Copying /wineprefix64 to /tmp (current user: $CURRENT_UID, owner: $WINEPREFIX_OWNER)"
-  export WINEPREFIX="/tmp/wineprefix"
-  rm -rf "$WINEPREFIX" 2>/dev/null || true
-  cp -r /wineprefix64 "$WINEPREFIX" 2>/dev/null || {
-    # Fallback: create fresh prefix
-    mkdir -p "$WINEPREFIX"
-    echo "WARNING: Could not copy /wineprefix64, using fresh prefix"
+  # Cavatica or different user: use per-run tmp paths to avoid collisions across concurrent jobs
+  export TMPDIR="$(mktemp -d /tmp/wine-tmp.XXXXXX)"
+  export WINEPREFIX="$(mktemp -d /tmp/wineprefix.XXXXXX)"
+  echo "Using WINEPREFIX=$WINEPREFIX TMPDIR=$TMPDIR (current user: $CURRENT_UID, owner: $WINEPREFIX_OWNER)"
+
+  cleanup_wine_tmp() {
+    rm -rf "$WINEPREFIX" "$TMPDIR" 2>/dev/null || true
   }
+  trap cleanup_wine_tmp EXIT
+
+  if [ -d /wineprefix64 ]; then
+    cp -r /wineprefix64/. "$WINEPREFIX" 2>/dev/null || {
+      echo "WARNING: Could not copy /wineprefix64, using fresh prefix"
+    }
+  else
+    echo "WARNING: /wineprefix64 not found, using fresh prefix"
+  fi
 fi
 
 export WINEARCH=win64

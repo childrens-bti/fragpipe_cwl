@@ -61,6 +61,11 @@ inputs:
     type: string
     doc: Base name for all output files (e.g., "SAMPLE001_N849")
 
+  control_combined_peptide:
+    type: File?
+    default: null
+    doc: Optional control-run combined peptide table used to remove overlapping peptides
+
 outputs:
   combined_protein:
     type: File?
@@ -71,6 +76,26 @@ outputs:
     type: File?
     outputSource: run_fragpipe/combined_peptide
     doc: Combined peptide quantification results
+
+  filtered_combined_peptide:
+    type: File?
+    outputSource: filter_control_peptides/filtered_combined_peptide
+    doc: Optional combined peptide output with control-overlap filtering applied
+
+  input_tumor_specific_peptides:
+    type: File?
+    outputSource: filter_control_peptides/input_tumor_specific_peptides
+    doc: Optional input-run tumor-specific peptide rows (non-canonical, non-decoy)
+
+  control_tumor_specific_peptides:
+    type: File?
+    outputSource: filter_control_peptides/control_tumor_specific_peptides
+    doc: Optional control-run tumor-specific peptide rows (non-canonical, non-decoy)
+
+  control_overlap_summary:
+    type: File?
+    outputSource: filter_control_peptides/control_overlap_summary
+    doc: Summary statistics for control-overlap filtering
 
   combined_modified_peptide:
     type: File?
@@ -207,6 +232,20 @@ steps:
       - sdrf_file
       - manifest_file_out
       - log_file
+
+  # Step 5: Optional filtering to remove peptides observed in control runs
+  filter_control_peptides:
+    run: tools/filter-control-peptides.cwl
+    when: $(inputs.control_combined_peptide !== null)
+    in:
+      input_combined_peptide: run_fragpipe/combined_peptide
+      control_combined_peptide: control_combined_peptide
+      output_basename: output_basename
+    out:
+      - filtered_combined_peptide
+      - input_tumor_specific_peptides
+      - control_tumor_specific_peptides
+      - control_overlap_summary
 
 
 $namespaces:
