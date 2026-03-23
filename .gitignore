@@ -40,8 +40,8 @@ sbg-hints/*
 # harmonized data
 data/*
 !data/.gitkeep
-!data/*manifest
-!data/*workflow
+!data/*manifest*
+!data/*workflow*
 !data/references/
 # manifest files
 manifests/*
