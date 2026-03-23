@@ -370,13 +370,20 @@ Auto-generate new manifest with full local paths
 
 ## Docker Image
 
-**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest`
+This project now maintains two explicit image tags:
 
-**Contents:**
-- FragPipe 22.0 at `/fragpipe_bin/fragPipe-22.0/fragpipe/`
-- Philosopher v5.1.1 at `/fragpipe_bin/fragPipe-22.0/fragpipe/tools/Philosopher/philosopher-v5.1.1`
-- MSFragger and other FragPipe tools
-- Shell scripts at `/opt/impact_trial/scripts/`
+- **Current workflow runtime (default):** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v24`
+- **Legacy runtime (older workflow compatibility):** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22`
+
+**`fragpipe_v24` contents (default):**
+- Base image: `fcyucn/fragpipe:latest`
+- FragPipe launcher: `/fragpipe_bin/fragpipe-24.0/fragpipe-24.0/bin/fragpipe`
+- Philosopher binary: `/fragpipe_bin/fragpipe-24.0/fragpipe-24.0/tools/Philosopher/philosopher-v5.1.3-RC9`
+- Repository scripts copied to: `/opt/scripts/`
+
+**`fragpipe_v22` contents (legacy):**
+- Preserved from previous `latest` image for backward compatibility.
+- Use this tag only when you need to reproduce older runs.
 
 **For .raw file conversion**, you also need:
 - **MSConvert Docker Image**: `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses`
@@ -384,17 +391,25 @@ Auto-generate new manifest with full local paths
   - Includes wine for running Windows-based msconvert
   - Used only for the `msconvert-raw.cwl` step
 
-**Building:**
+**Build and publish `fragpipe_v24`:**
 ```bash
-docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest .
-docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest
+docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v24 .
+docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v24
+```
+
+**Preserve the old `latest` image as `fragpipe_v22`:**
+```bash
+docker tag pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest \
+  pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22
+docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22
 ```
 
 ## Requirements
 
 - **CWL Runner**: cwltool 3.1+ (for CWL v1.2 support including `InplaceUpdateRequirement`)
 - **Docker**: For containerized execution
-  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest`
+  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v24`
+  - Legacy image (optional): `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22`
   - MSConvert image (for .raw files): `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses` (auto-pulled)
 - **SBFS**: Seven Bridges File System (for local workflow with Cavatica mounts)
   - Requires `/etc/fuse.conf` with `user_allow_other` enabled

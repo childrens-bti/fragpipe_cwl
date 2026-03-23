@@ -9,7 +9,13 @@ OUTPUT_BASENAME="$4"
 
 # Set up writable runtime directory and HOME for FragPipe config/cache
 RUNTIME_DIR="$(pwd)/fragpipe-runtime"
-FRAGPIPE_SRC="/fragpipe_bin/fragPipe-22.0/fragpipe"
+FRAGPIPE_SRC="/fragpipe_bin/fragpipe-24.0/fragpipe-24.0"
+
+if [ ! -x "$FRAGPIPE_SRC/bin/fragpipe" ] || [ ! -d "$FRAGPIPE_SRC/tools" ]; then
+  echo "ERROR: Expected FragPipe path not found: $FRAGPIPE_SRC"
+  exit 1
+fi
+
 if [ ! -d "$RUNTIME_DIR" ]; then
   cp -R "$FRAGPIPE_SRC" "$RUNTIME_DIR"
 fi

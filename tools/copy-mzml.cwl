@@ -11,7 +11,7 @@ baseCommand: [bash, /opt/scripts/copy-mzml.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v24"
   InitialWorkDirRequirement:
     listing:
       - writable: true

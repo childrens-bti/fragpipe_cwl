@@ -5,7 +5,12 @@ set -o pipefail
 QUERY_FASTA="$1"
 UNIPROT_FASTA="$2"
 
-PHIL_BIN="/fragpipe_bin/fragPipe-22.0/fragpipe/tools/Philosopher/philosopher-v5.1.1"
+PHIL_BIN="/fragpipe_bin/fragpipe-24.0/fragpipe-24.0/tools/Philosopher/philosopher-v5.1.3-RC9"
+
+if [ ! -x "$PHIL_BIN" ]; then
+  echo "ERROR: Expected Philosopher binary not found: $PHIL_BIN" >&2
+  exit 1
+fi
 
 # Initialize Philosopher workspace
 "$PHIL_BIN" workspace --init
