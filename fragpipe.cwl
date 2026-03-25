@@ -1,12 +1,34 @@
 cwlVersion: v1.2
 class: Workflow
 
-label: FragPipe Proteomics Pipeline
+label: FragPipe Proteomics Pipeline (fragpipe v24)
 doc: |
   Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
-  This workflow can process .raw, .mzML.gz, and .mzML files.
-  It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
+  
+  **Version:** FragPipe v24.0-build27 (updated from v22/v23)
+  
+  **Supported input formats:** .raw, .mzML.gz, and .mzML files with automatic detection.
   Input type must be specified: "raw", "mzml_gz", or "mzml".
+  
+  **Key workflow steps:**
+  1. Auto-detect input file type (raw/mzML.gz/mzML)
+  2. Convert/decompress files as needed using msconvert + gunzip
+  3. Prepare database with FASTA decoys/contaminants via Philosopher
+  4. Filter canonical peptides by gene symbol
+  5. Run FragPipe headless with dynamic FASTA injection
+  6. Optional: Apply mutation-position gating and control-peptide overlap filtering on tumor-specific variants
+  
+  **[v24 changes for DDA]**
+  - IonQuant intensity mode now explicit (set to mode 0 for v22-like abundance scaling)
+  - MSBooster now includes IM prediction for instruments with ion mobility data (inactive for regular MS)
+  - Expanded MSFragger parameters (digest-only, labile-fragment handling) for advanced search scenarios
+  - New MBG (Motif-x Biomarker Generation) and transfer-learning blocks (disabled by default)
+  - See docs/impact002-lfq-mbr-parameter-changes.md for complete v22 vs v24 delta
+  
+  **For regular DDA on non-IM instruments:** Core search/quant settings remain aligned with v22 workflows.
+  Precursor mass tolerance, enzyme, modifications, and percolator thresholds are backward compatible.
+  
+  This workflow performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
 
 requirements:
   InlineJavascriptRequirement: {}
