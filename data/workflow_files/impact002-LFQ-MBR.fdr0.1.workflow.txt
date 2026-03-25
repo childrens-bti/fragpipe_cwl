@@ -1,8 +1,4 @@
-# Workflow: LFQ-MBR
-
-# Please edit the following path to point to the correct location.
-# In Windows, please replace single '\' with '\\'
-database.db-path=decoys-contam-custom-canonical.fasta
+# Workflow: LFQ-MBR (customized - fdr 0.1)
 
 crystalc.run-crystalc=false
 database.decoy-tag=rev_
