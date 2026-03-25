@@ -55,9 +55,8 @@ manifests/*
 tools/*.jar
 
 # Ignore root shell scripts
-run_fragpipe.sh
 run_data.sh
-
+mount_s3.sh
 # ignore cwl local run temp files
 .cwl-tmp/
 .cwl-out/
