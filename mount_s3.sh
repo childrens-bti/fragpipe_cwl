@@ -26,7 +26,8 @@ if [[ -z "$BUCKET" ]]; then
   usage
 fi
 
-MOUNT_PATH="./data/$BUCKET"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+MOUNT_PATH="$REPO_ROOT/data/$BUCKET"
 
 echo "Using BUCKET: $BUCKET"
 
@@ -60,11 +61,17 @@ if mountpoint -q "$MOUNT_PATH"; then
   echo "Forcefully removing existing mount point at $MOUNT_PATH..."
   sudo fuser -km "$MOUNT_PATH" 2>/dev/null || true
   fusermount -u "$MOUNT_PATH" 2>/dev/null || sudo umount -l "$MOUNT_PATH" 2>/dev/null || true
-  rmdir "$MOUNT_PATH" 2>/dev/null || true
 fi
 
 # Create the mount directory
 mkdir -p "$MOUNT_PATH"
+
+# mount-s3 requires an empty mountpoint. Clean stale content left by prior failed runs.
+if [[ -n "$(ls -A "$MOUNT_PATH" 2>/dev/null)" ]]; then
+  echo "⚠️  Mount path is not empty and not mounted: $MOUNT_PATH"
+  echo "Cleaning stale contents before mounting..."
+  find "$MOUNT_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+fi
 
 # Mount the S3 bucket
 echo "🔗 Mounting s3://$BUCKET to $MOUNT_PATH ..."
