@@ -63,3 +63,5 @@ logs/
 # sbfs mount temp files
 .sbfs-home/
 .sbfs-log/
+
+docs/*
