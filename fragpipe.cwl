@@ -8,6 +8,12 @@ doc: |
   It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
   Input type must be specified: "raw", "mzml_gz", or "mzml".
 
+  Reliability updates:
+  1) Workflow files without `database.db-path` are supported.
+    The runtime script injects a valid FASTA path if the key is missing, or replaces it if present.
+  2) Cavatica Wine ownership issues during RAW->mzML conversion are handled.
+    msconvert runs with per-worker Wine isolation and follows CWL-staged symlinks, avoiding temp/prefix permission conflicts.
+
 requirements:
   InlineJavascriptRequirement: {}
   StepInputExpressionRequirement: {}
@@ -260,5 +266,5 @@ hints:
   value: "m5.8xlarge"
 
 "sbg:links":
-- id: "https://github.com/childrens-bti/fragpipe_cwl/tree/feature/handle_.raw_input" # will update with stable release
+- id: "https://github.com/childrens-bti/fragpipe_cwl/tree/v1.0.0"
   label: github-release
