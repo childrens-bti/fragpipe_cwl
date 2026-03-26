@@ -1,8 +1,0 @@
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_01.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_01		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_02.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_02		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_03.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_03		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_04.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_04		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_05.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_05		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_06.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_06		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_07.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_07		DDA
-s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_08.raw	Rood_IMPACT_DDA_Astral2_012226_IO15_HpH_IMP002_08		DDA

@@ -1,8 +1,4 @@
-# Workflow: LFQ-MBR
-
-# Please edit the following path to point to the correct location.
-# In Windows, please replace single '\' with '\\'
-database.db-path=decoys-contam-custom-canonical.fasta
+# Workflow: LFQ-MBR (customized)
 
 crystalc.run-crystalc=false
 database.decoy-tag=rev_
@@ -72,7 +68,7 @@ ionquant.ionfdr=0.05
 ionquant.light=
 ionquant.locprob=0.75
 ionquant.maxlfq=1
-ionquant.mbr=0
+ionquant.mbr=1
 ionquant.mbrimtol=0.05
 ionquant.mbrmincorr=0
 ionquant.mbrrttol=1
@@ -218,15 +214,15 @@ peptide-prophet.cmd-opts=--decoyprobs --ppm --accmass --nonparam --expectscore
 peptide-prophet.combine-pepxml=false
 peptide-prophet.run-peptide-prophet=false
 percolator.cmd-opts=--only-psms --no-terminate --post-processing-tdc --testFDR 0.05 --trainFDR 0.05
-percolator.keep-tsv-files=true
+percolator.keep-tsv-files=false
 percolator.min-prob=0.5
 percolator.run-percolator=true
 phi-report.dont-use-prot-proph-file=false
 phi-report.filter=--sequential --psm 0.05 --pep 0.05 --prot 0.05 --picked
-phi-report.pep-level-summary=true
-phi-report.print-decoys=true
-phi-report.prot-level-summary=true
-phi-report.remove-contaminants=true
+phi-report.pep-level-summary=false
+phi-report.print-decoys=false
+phi-report.prot-level-summary=false
+phi-report.remove-contaminants=false
 phi-report.run-report=true
 protein-prophet.cmd-opts=--maxppmdiff 2000000
 protein-prophet.run-protein-prophet=true
