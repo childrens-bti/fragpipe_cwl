@@ -33,10 +33,7 @@ FASTA_ABS="$(cd "$(dirname "$FILTERED_FASTA")" && pwd)/$(basename "$FILTERED_FAS
 
 # Create modified workflow file with correct FASTA path
 WORKFLOW_MODIFIED="$(pwd)/workflow_modified.workflow"
-{
-  echo "database.db-path=$FASTA_ABS"
-  cat "$WORKFLOW_FILE"
-} > "$WORKFLOW_MODIFIED"
+awk -v db="database.db-path=$FASTA_ABS" 'BEGIN{done=0} /^database\.db-path=/{if(!done){print db; done=1}; next} {print} END{if(!done) print db}' "$WORKFLOW_FILE" > "$WORKFLOW_MODIFIED"
 
 # Run FragPipe in headless mode (FragPipe writes its own log file in the workdir)
 "$FRAGPIPE_BIN" \
