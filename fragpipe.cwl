@@ -260,5 +260,5 @@ hints:
   value: "m5.8xlarge"
 
 "sbg:links":
-- id: "https://github.com/childrens-bti/fragpipe_cwl/tree/feature/handle_.raw_input" # will update with stable release
+- id: "https://github.com/childrens-bti/fragpipe_cwl" # will update with stable release
   label: github-release
