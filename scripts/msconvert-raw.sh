@@ -146,8 +146,9 @@ FILES_TO_PROCESS=()
 while IFS=$'\t' read -r path_ignored exp_name rest; do
   [[ -z "$exp_name" || "$exp_name" == "Experiment"* ]] && continue
   
-  # Find .raw file matching the base name
-  found_files=$(find "$SOURCE_DIR_ABS" -type f -iname "${exp_name}.raw" 2>/dev/null || true)
+  # Find .raw file matching the base name.
+  # Use -L to follow symlinks: CWL stages directory contents as symlinks under /var/lib/cwl/stg*.
+  found_files=$(find -L "$SOURCE_DIR_ABS" -type f -iname "${exp_name}.raw" 2>/dev/null || true)
   
   if [ -z "$found_files" ]; then
     echo "WARNING: No .raw file found for $exp_name"
