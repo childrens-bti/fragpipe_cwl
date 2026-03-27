@@ -69,6 +69,7 @@ RUN python3 -m pip install --upgrade pip
 RUN pip install --no-cache-dir \
     "numpy<2" \
     "pandas<2" \
+    "scikit-learn<1.6" \
     "lxml" \
     "easypqp==0.1.55"
 
