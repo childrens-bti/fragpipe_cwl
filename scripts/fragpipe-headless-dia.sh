@@ -31,6 +31,8 @@ WORKFLOW_MODIFIED="$(pwd)/workflow_modified.workflow"
 awk -v db="database.db-path=$FASTA_ABS" 'BEGIN{done=0} /^database\.db-path=/{if(!done){print db; done=1}; next} {print} END{if(!done) print db}' "$WORKFLOW_FILE" > "$WORKFLOW_MODIFIED"
 
 # Run FragPipe and preserve exit status so we can still prefix any generated outputs.
+# set +e remains active through the workaround block so we can safely inspect/handle
+# non-zero exits without triggering set -e early termination.
 set +e
 "$FRAGPIPE_BIN" \
   --headless \
@@ -39,12 +41,61 @@ set +e
   --workdir "$RESULTS_DIR" \
   --config-tools-folder "$FRAGPIPE_TOOLS"
 fragpipe_exit=$?
+
+# --- Bug workaround: FragPipe issue #2050 ---
+# DIA-NN writes report2.tsv but the Propagation step hard-codes report.tsv.
+# If FragPipe failed with report2.tsv present but report.tsv absent, copy the file
+# and re-run Propagation + MSstats directly (set +e is still in effect here so we
+# can capture each exit code without the script aborting on us).
+if [ "$fragpipe_exit" -ne 0 ] && \
+   [ -f "$RESULTS_DIR/diann-output/report2.tsv" ] && \
+   [ ! -f "$RESULTS_DIR/diann-output/report.tsv" ]; then
+
+  echo "=== Applying FragPipe #2050 workaround: copying report2.tsv -> report.tsv ==="
+  cp "$RESULTS_DIR/diann-output/report2.tsv" "$RESULTS_DIR/diann-output/report.tsv"
+
+  # Locate JAR files from the runtime directory
+  BATMASS_JAR=$(ls "$RUNTIME_DIR/tools/batmass-io"*.jar 2>/dev/null | head -1)
+  COMMONS_JAR=$(ls "$RUNTIME_DIR/lib/commons-io"*.jar 2>/dev/null | head -1)
+  FRAGPIPE_JAR=$(ls "$RUNTIME_DIR/lib/fragpipe"*.jar 2>/dev/null | head -1)
+
+  echo "=== Re-running DIA-NN: Propagate information ==="
+  cd "$RESULTS_DIR/diann-output"
+  java -Duser.home="$HOME" \
+       -cp "${BATMASS_JAR}:${FRAGPIPE_JAR}:${FRAGPIPE_JAR}" \
+       com.dmtavt.fragpipe.tools.diann.Propagation "$RESULTS_DIR"
+  prop_exit=$?
+  cd "$RESULTS_DIR"
+
+  if [ "$prop_exit" -eq 0 ]; then
+    echo "=== Re-running DIA-NN: Convert to MSstats.csv ==="
+    DIANN_Q=$(grep "^diann.q-value=" "$RESULTS_DIR/fragpipe.workflow" 2>/dev/null | cut -d= -f2)
+    DIANN_Q=${DIANN_Q:-0.01}
+    cd "$RESULTS_DIR/diann-output"
+    java -Duser.home="$HOME" \
+         -cp "${COMMONS_JAR}:${FRAGPIPE_JAR}:${FRAGPIPE_JAR}" \
+         com.dmtavt.fragpipe.tools.diann.DiannToMsstats \
+         report.tsv ./ "$RESULTS_DIR/psm.tsv" "$DIANN_Q" 1 "$DIANN_Q" "$DIANN_Q" \
+         "$RESULTS_DIR/fragpipe-files.fp-manifest"
+    msstats_exit=$?
+    cd "$RESULTS_DIR"
+    [ "$msstats_exit" -eq 0 ] && fragpipe_exit=0
+  fi
+fi
+
 set -e
 
 # Rename output files with output_basename prefix
 if [ -n "$OUTPUT_BASENAME" ]; then
   echo "=== Adding output_basename prefix: $OUTPUT_BASENAME ==="
   cd "$RESULTS_DIR"
+
+  # DIA workflows may output fragger_dia.params instead of fragger.params.
+  # Normalize to fragger.params so CWL output globs stay consistent across modes.
+  if [ -f "fragger_dia.params" ] && [ ! -f "fragger.params" ]; then
+    mv "fragger_dia.params" "fragger.params"
+    echo "Renamed: fragger_dia.params -> fragger.params"
+  fi
 
   # Common metadata/config outputs
   for file in fragger.params fragpipe.workflow fragpipe-files.fp-manifest \
