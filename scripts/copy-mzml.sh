@@ -79,8 +79,20 @@ if [[ -z "$MANIFEST_FILE" || ! -f "$MANIFEST_FILE" ]]; then
   exit 2
 fi
 echo "Using manifest file: $MANIFEST_FILE"
-# Read base names from 2nd column (tab-separated)
-mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{print $2}' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
+
+# Read base names (col2) and acquisition mode (col4) from the manifest.
+# Use awk to preserve true column positions even when col3 is empty.
+declare -A MANIFEST_ACQ_MODE
+while IFS=$'\t' read -r base acq; do
+  [[ -n "$base" ]] || continue
+  acq="${acq%$'\r'}"
+  if [[ -z "$acq" ]]; then
+    acq="DDA"
+  fi
+  MANIFEST_ACQ_MODE["$base"]="$acq"
+done < <(awk -F'\t' 'NF >= 2 {print $2 "\t" $4}' "$MANIFEST_FILE")
+
+mapfile -t MANIFEST_BASENAMES < <(printf '%s\n' "${!MANIFEST_ACQ_MODE[@]}" | sort)
 # Process files found either directly under SOURCE_DIR or in experiment subfolders
 # For each manifest base name, find the first matching file anywhere under SOURCE_DIR
 for m in "${MANIFEST_BASENAMES[@]}"; do
@@ -96,10 +108,11 @@ done
 # Create mzml_files.txt (all mzML paths)
 find "$OUT_DIR" -type f -name "*.mzML" | sort > mzml_files.txt
 
-# mzml_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
+# mzml_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, acquisition mode)
 while IFS= read -r filepath; do
   basename=$(basename "$filepath" .mzML)
-  echo -e "${filepath}\t${basename}\t\tDDA"
+  acq="${MANIFEST_ACQ_MODE[$basename]:-DDA}"
+  echo -e "${filepath}\t${basename}\t\t${acq}"
 done < mzml_files.txt > mzml_manifest.fp-manifest
 
 echo "Copy complete. $(wc -l < mzml_files.txt) mzML files ready."

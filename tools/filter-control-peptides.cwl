@@ -37,6 +37,10 @@ inputs:
     inputBinding:
       position: 3
 
+  acquisition_mode:
+    type: string?
+    doc: Optional pass-through mode selector from workflow conditional logic
+
 outputs:
   filtered_combined_peptide:
     type: File

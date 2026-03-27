@@ -143,8 +143,15 @@ export -f process_file
 
 # Read manifest and collect files to process
 FILES_TO_PROCESS=()
-while IFS=$'\t' read -r path_ignored exp_name rest; do
+# Preserve acquisition mode from the input manifest when generating the staged FragPipe manifest.
+declare -A MANIFEST_ACQ_MODE
+while IFS=$'\t' read -r exp_name acq; do
   [[ -z "$exp_name" || "$exp_name" == "Experiment"* ]] && continue
+  acq="${acq%$'\r'}"
+  if [[ -z "$acq" ]]; then
+    acq="DDA"
+  fi
+  MANIFEST_ACQ_MODE["$exp_name"]="$acq"
   
   # Find .raw file matching the base name.
   # Use -L to follow symlinks: CWL stages directory contents as symlinks under /var/lib/cwl/stg*.
@@ -158,7 +165,7 @@ while IFS=$'\t' read -r path_ignored exp_name rest; do
   while IFS= read -r raw_file; do
     FILES_TO_PROCESS+=("$raw_file")
   done <<< "$found_files"
-done < "$MANIFEST_FILE"
+done < <(awk -F'\t' 'NF >= 2 {print $2 "\t" $4}' "$MANIFEST_FILE")
 
 # Process files in parallel using GNU parallel or xargs
 if command -v parallel &> /dev/null; then
@@ -172,12 +179,13 @@ fi
 # Generate file list
 find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > mzml_files.txt
 
-# Generate FragPipe manifest
+# Generate FragPipe manifest preserving original acquisition mode
 > mzml_manifest.fp-manifest
 while IFS= read -r mzml_file; do
   basename_no_ext=$(basename "$mzml_file" .mzML)
   basename_no_ext=$(basename "$basename_no_ext" .mzml)
-  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> mzml_manifest.fp-manifest
+  acq="${MANIFEST_ACQ_MODE[$basename_no_ext]:-DDA}"
+  echo -e "${mzml_file}\t${basename_no_ext}\t\t${acq}" >> mzml_manifest.fp-manifest
 done < mzml_files.txt
 
 NUM_FILES=$(wc -l < mzml_files.txt)

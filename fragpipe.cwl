@@ -41,6 +41,11 @@ inputs:
   input_type:
     type: string
     doc: Type of input files - must be one of "raw", "mzml_gz", or "mzml"
+
+  acquisition_mode:
+    type: string
+    default: "DDA"
+    doc: Data acquisition mode - must be one of "DDA" or "DIA"
     
   run_subset:
     type: boolean
@@ -69,12 +74,12 @@ inputs:
 outputs:
   combined_protein:
     type: File?
-    outputSource: run_fragpipe/combined_protein
+    outputSource: run_fragpipe_dda/combined_protein
     doc: Combined protein quantification results
     
   combined_peptide:
     type: File?
-    outputSource: run_fragpipe/combined_peptide
+    outputSource: run_fragpipe_dda/combined_peptide
     doc: Combined peptide quantification results
 
   filtered_combined_peptide:
@@ -99,53 +104,95 @@ outputs:
 
   combined_modified_peptide:
     type: File?
-    outputSource: run_fragpipe/combined_modified_peptide
+    outputSource: run_fragpipe_dda/combined_modified_peptide
     doc: Combined modified peptide quantification results
     
   combined_ion:
     type: File?
-    outputSource: run_fragpipe/combined_ion
+    outputSource: run_fragpipe_dda/combined_ion
     doc: Combined ion quantification results
 
   tmt_report:
     type: Directory?
-    outputSource: run_fragpipe/tmt_report
+    outputSource: run_fragpipe_dda/tmt_report
     doc: TMT reporter ion quantification results
 
   workflow_file_out:
     type: File?
-    outputSource: run_fragpipe/workflow_file_out
+    outputSource: [run_fragpipe_dda/workflow_file_out, run_fragpipe_dia/workflow_file_out]
+    pickValue: first_non_null
     doc: FragPipe workflow configuration used
 
   fragger_params:
     type: File?
-    outputSource: run_fragpipe/fragger_params
+    outputSource: [run_fragpipe_dda/fragger_params, run_fragpipe_dia/fragger_params]
+    pickValue: first_non_null
     doc: MSFragger parameter file
 
   tmt_integrator_conf:
     type: File?
-    outputSource: run_fragpipe/tmt_integrator_conf
+    outputSource: run_fragpipe_dda/tmt_integrator_conf
     doc: TMT-Integrator configuration file
 
   experiment_annotation:
     type: File?
-    outputSource: run_fragpipe/experiment_annotation
+    outputSource: [run_fragpipe_dda/experiment_annotation, run_fragpipe_dia/experiment_annotation]
+    pickValue: first_non_null
     doc: Experiment annotation file
 
   sdrf_file:
     type: File?
-    outputSource: run_fragpipe/sdrf_file
+    outputSource: [run_fragpipe_dda/sdrf_file, run_fragpipe_dia/sdrf_file]
+    pickValue: first_non_null
     doc: SDRF metadata file
 
   manifest_file_out:
     type: File?
-    outputSource: run_fragpipe/manifest_file_out
+    outputSource: [run_fragpipe_dda/manifest_file_out, run_fragpipe_dia/manifest_file_out]
+    pickValue: first_non_null
     doc: FragPipe manifest file used
 
   log_file:
     type: File?
-    outputSource: run_fragpipe/log_file
+    outputSource: [run_fragpipe_dda/log_file, run_fragpipe_dia/log_file]
+    pickValue: first_non_null
     doc: FragPipe execution log file
+
+  diann_report:
+    type: File?
+    outputSource: run_fragpipe_dia/diann_report
+    doc: DIA-NN main report table
+
+  diann_pr_matrix:
+    type: File?
+    outputSource: run_fragpipe_dia/diann_pr_matrix
+    doc: DIA-NN precursor intensity matrix
+
+  diann_pg_matrix:
+    type: File?
+    outputSource: run_fragpipe_dia/diann_pg_matrix
+    doc: DIA-NN protein group intensity matrix
+
+  diann_stats:
+    type: File?
+    outputSource: run_fragpipe_dia/diann_stats
+    doc: DIA-NN run statistics
+
+  diann_msstats:
+    type: File?
+    outputSource: run_fragpipe_dia/diann_msstats
+    doc: MSstats table converted from DIA-NN report
+
+  peptide_tsv:
+    type: File?
+    outputSource: run_fragpipe_dia/peptide_tsv
+    doc: Philosopher peptide-level report
+
+  protein_tsv:
+    type: File?
+    outputSource: run_fragpipe_dia/protein_tsv
+    doc: Philosopher protein-level report
+
 
 steps:
   # Step 1a: Convert .raw files to mzML (if input is .raw)
@@ -206,13 +253,15 @@ steps:
       fasta_with_decoys: prepare_database/fasta_with_decoys
     out: [filtered_fasta, gene_symbols]
     
-  # Step 4: Run FragPipe headless
-  run_fragpipe:
+  # Step 4a: Run FragPipe headless for DDA workflows
+  run_fragpipe_dda:
     run: tools/fragpipe-headless.cwl
+    when: $(inputs.acquisition_mode === "DDA")
     in:
       filtered_fasta: filter_canonical/filtered_fasta
       workflow_file: workflow_file
       output_basename: output_basename
+      acquisition_mode: acquisition_mode
       manifest_file:
         source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
         pickValue: first_non_null
@@ -233,14 +282,45 @@ steps:
       - manifest_file_out
       - log_file
 
+  # Step 4b: Run FragPipe headless for DIA workflows
+  run_fragpipe_dia:
+    run: tools/fragpipe-headless-dia.cwl
+    when: $(inputs.acquisition_mode === "DIA")
+    in:
+      filtered_fasta: filter_canonical/filtered_fasta
+      workflow_file: workflow_file
+      output_basename: output_basename
+      acquisition_mode: acquisition_mode
+      manifest_file:
+        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
+        pickValue: first_non_null
+      mzml_directory:
+        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
+        pickValue: first_non_null
+    out:
+      - workflow_file_out
+      - fragger_params
+      - experiment_annotation
+      - sdrf_file
+      - manifest_file_out
+      - log_file
+      - diann_report
+      - diann_pr_matrix
+      - diann_pg_matrix
+      - diann_stats
+      - diann_msstats
+      - peptide_tsv
+      - protein_tsv
+
   # Step 5: Optional filtering to remove peptides observed in control runs
   filter_control_peptides:
     run: tools/filter-control-peptides.cwl
-    when: $(inputs.control_combined_peptide !== null)
+    when: $(inputs.control_combined_peptide !== null && inputs.acquisition_mode === "DDA")
     in:
-      input_combined_peptide: run_fragpipe/combined_peptide
+      input_combined_peptide: run_fragpipe_dda/combined_peptide
       control_combined_peptide: control_combined_peptide
       output_basename: output_basename
+      acquisition_mode: acquisition_mode
     out:
       - filtered_combined_peptide
       - input_tumor_specific_peptides
