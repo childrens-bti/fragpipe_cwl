@@ -4,6 +4,16 @@ import re
 import pandas as pd
 
 
+def resolve_column(df: pd.DataFrame, candidates: list[str], table_label: str) -> str:
+    for column in candidates:
+        if column in df.columns:
+            return column
+    raise ValueError(
+        f"{table_label} must contain one of columns: "
+        + ", ".join(f"'{col}'" for col in candidates)
+    )
+
+
 def is_non_canonical(protein_series: pd.Series) -> pd.Series:
     values = protein_series.fillna("").astype(str).str.strip()
     is_decoy = values.str.startswith("rev_")
@@ -61,43 +71,48 @@ def main() -> None:
     input_tumor_specific_output = f"{output_basename}_input_tumor_specific_peptides.tsv"
     control_tumor_specific_output = f"{output_basename}_control_tumor_specific_peptides.tsv"
 
-    peptide_col = "Peptide Sequence"
-    protein_col = "Protein"
-    start_col = "Start"
-    end_col = "End"
+    peptide_col_candidates = ["Peptide Sequence", "Peptide"]
+    protein_col_candidates = ["Protein"]
+    start_col_candidates = ["Start", "Protein Start"]
+    end_col_candidates = ["End", "Protein End"]
 
     control_df = pd.read_csv(control_path, sep="\t", dtype=str, keep_default_na=False)
-    required_control_cols = [peptide_col, protein_col, start_col, end_col]
-    missing_control_cols = [col for col in required_control_cols if col not in control_df.columns]
-    if missing_control_cols:
-        raise ValueError(
-            "Control file must contain columns: "
-            + ", ".join(f"'{col}'" for col in required_control_cols)
-        )
+    control_peptide_col = resolve_column(
+        control_df, peptide_col_candidates, "Control file"
+    )
+    control_protein_col = resolve_column(
+        control_df, protein_col_candidates, "Control file"
+    )
+    control_start_col = resolve_column(
+        control_df, start_col_candidates, "Control file"
+    )
+    control_end_col = resolve_column(
+        control_df, end_col_candidates, "Control file"
+    )
 
-    control_protein = control_df[protein_col]
-    control_peptide_series = control_df[peptide_col].astype(str).str.strip()
+    control_protein = control_df[control_protein_col]
+    control_peptide_series = control_df[control_peptide_col].astype(str).str.strip()
     control_tumor_base_mask = is_non_canonical(control_protein) & control_peptide_series.ne("")
 
     control_mutation_overlap_mask = pd.Series(True, index=control_df.index)
     for idx, row in control_df.loc[
-        control_tumor_base_mask, [protein_col, start_col, end_col]
+        control_tumor_base_mask, [control_protein_col, control_start_col, control_end_col]
     ].iterrows():
-        protein_value = row[protein_col]
+        protein_value = row[control_protein_col]
         if is_splice_event_id(protein_value):
             control_mutation_overlap_mask.at[idx] = True
             continue
         mutation_pos = parse_mutation_position(protein_value)
         if mutation_pos is not None:
             control_mutation_overlap_mask.at[idx] = overlaps_mutation_site(
-                row[start_col], row[end_col], mutation_pos
+                row[control_start_col], row[control_end_col], mutation_pos
             )
         else:
             control_mutation_overlap_mask.at[idx] = True
 
     control_tumor_mask = control_tumor_base_mask & control_mutation_overlap_mask
     control_peptides = set(
-        control_df.loc[control_tumor_mask, peptide_col]
+        control_df.loc[control_tumor_mask, control_peptide_col]
         .astype(str)
         .str.strip()
         .loc[lambda series: series.ne("")]
@@ -107,29 +122,36 @@ def main() -> None:
     control_peptide_list = list(control_peptides)
 
     input_df = pd.read_csv(input_path, sep="\t", dtype=str, keep_default_na=False)
-    required_input_cols = [peptide_col, protein_col, start_col, end_col]
-    missing_input_cols = [col for col in required_input_cols if col not in input_df.columns]
-    if missing_input_cols:
-        raise ValueError(
-            "Input file must contain columns: "
-            + ", ".join(f"'{col}'" for col in required_input_cols)
-        )
+    input_peptide_col = resolve_column(
+        input_df, peptide_col_candidates, "Input file"
+    )
+    input_protein_col = resolve_column(
+        input_df, protein_col_candidates, "Input file"
+    )
+    input_start_col = resolve_column(
+        input_df, start_col_candidates, "Input file"
+    )
+    input_end_col = resolve_column(
+        input_df, end_col_candidates, "Input file"
+    )
 
-    input_protein = input_df[protein_col]
-    input_peptides = input_df[peptide_col].astype(str).str.strip()
+    input_protein = input_df[input_protein_col]
+    input_peptides = input_df[input_peptide_col].astype(str).str.strip()
     input_tumor_base_mask = is_non_canonical(input_protein) & input_peptides.ne("")
     input_tumor_specific_mask = input_tumor_base_mask.copy()
 
     mutation_overlap_mask = pd.Series(True, index=input_df.index)
-    for idx, row in input_df.loc[input_tumor_base_mask, [protein_col, start_col, end_col]].iterrows():
-        protein_value = row[protein_col]
+    for idx, row in input_df.loc[
+        input_tumor_base_mask, [input_protein_col, input_start_col, input_end_col]
+    ].iterrows():
+        protein_value = row[input_protein_col]
         if is_splice_event_id(protein_value):
             mutation_overlap_mask.at[idx] = True
             continue
         mutation_pos = parse_mutation_position(protein_value)
         if mutation_pos is not None:
             mutation_overlap_mask.at[idx] = overlaps_mutation_site(
-                row[start_col], row[end_col], mutation_pos
+                row[input_start_col], row[input_end_col], mutation_pos
             )
         else:
             mutation_overlap_mask.at[idx] = True

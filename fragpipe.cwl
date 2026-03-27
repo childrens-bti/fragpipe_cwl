@@ -315,9 +315,11 @@ steps:
   # Step 5: Optional filtering to remove peptides observed in control runs
   filter_control_peptides:
     run: tools/filter-control-peptides.cwl
-    when: $(inputs.control_combined_peptide !== null && inputs.acquisition_mode === "DDA")
+    when: $(inputs.control_combined_peptide !== null)
     in:
-      input_combined_peptide: run_fragpipe_dda/combined_peptide
+      input_combined_peptide:
+        source: [run_fragpipe_dda/combined_peptide, run_fragpipe_dia/peptide_tsv]
+        pickValue: first_non_null
       control_combined_peptide: control_combined_peptide
       output_basename: output_basename
       acquisition_mode: acquisition_mode
