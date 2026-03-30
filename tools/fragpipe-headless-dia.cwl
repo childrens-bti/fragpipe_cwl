@@ -1,13 +1,12 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-label: FragPipe Headless Execution
+label: FragPipe Headless DIA Execution
 doc: |
-  Run FragPipe in headless mode for proteomics analysis.
-  This tool executes FragPipe with a specified workflow, manifest file,
-  and processed FASTA database.
+  Run FragPipe in headless mode for DIA workflows.
+  This tool executes FragPipe with a DIA workflow and captures DIA-NN outputs.
 
-baseCommand: [bash, /opt/scripts/fragpipe-headless.sh]
+baseCommand: [bash, /opt/scripts/fragpipe-headless-dia.sh]
 
 requirements:
   InlineJavascriptRequirement: {}
@@ -52,7 +51,7 @@ inputs:
 
   output_basename:
     type: string
-    doc: Base name for all output files (e.g., "SAMPLE001_N849")
+    doc: Base name for all output files (e.g., "IMPACT002-Run2-DIA")
     inputBinding:
       position: 4
 
@@ -65,36 +64,7 @@ inputs:
     doc: Directory containing decompressed mzML files
 
 outputs:
-  combined_protein:
-    type: File?
-    outputBinding:
-      glob: "results/$(inputs.output_basename)_combined_protein.tsv"
-    doc: Combined protein quantification results
-
-  combined_peptide:
-    type: File?
-    outputBinding:
-      glob: "results/$(inputs.output_basename)_combined_peptide.tsv"
-    doc: Combined peptide quantification results
-
-  combined_modified_peptide:
-    type: File?
-    outputBinding:
-      glob: "results/$(inputs.output_basename)_combined_modified_peptide.tsv"
-    doc: Combined modified peptide quantification results
-
-  combined_ion:
-    type: File?
-    outputBinding:
-      glob: "results/$(inputs.output_basename)_combined_ion.tsv"
-    doc: Combined ion quantification results
-
-  tmt_report:
-    type: Directory?
-    outputBinding:
-      glob: "results/$(inputs.output_basename)_tmt-report"
-    doc: TMT reporter ion quantification results
-
+  # Common metadata/config outputs
   workflow_file_out:
     type: File?
     outputBinding:
@@ -106,12 +76,6 @@ outputs:
     outputBinding:
       glob: "results/$(inputs.output_basename)_fragger.params"
     doc: MSFragger parameter file
-
-  tmt_integrator_conf:
-    type: File?
-    outputBinding:
-      glob: "results/$(inputs.output_basename)_tmt-integrator-conf.yml"
-    doc: TMT-Integrator configuration file
 
   experiment_annotation:
     type: File?
@@ -136,3 +100,47 @@ outputs:
     outputBinding:
       glob: "results/$(inputs.output_basename)_log*.txt"
     doc: FragPipe execution log file
+
+  # DIA-specific outputs
+  diann_report:
+    type: File?
+    outputBinding:
+      glob: "results/diann-output/$(inputs.output_basename)_report.tsv"
+    doc: DIA-NN main report table
+
+  diann_pr_matrix:
+    type: File?
+    outputBinding:
+      glob: "results/diann-output/$(inputs.output_basename)_report.pr_matrix.tsv"
+    doc: DIA-NN precursor intensity matrix
+
+  diann_pg_matrix:
+    type: File?
+    outputBinding:
+      glob: "results/diann-output/$(inputs.output_basename)_report.pg_matrix.tsv"
+    doc: DIA-NN protein group intensity matrix
+
+  diann_stats:
+    type: File?
+    outputBinding:
+      glob: "results/diann-output/$(inputs.output_basename)_report.stats.tsv"
+    doc: DIA-NN run statistics
+
+  diann_msstats:
+    type: File?
+    outputBinding:
+      glob: "results/diann-output/$(inputs.output_basename)_MSstats.csv"
+    doc: MSstats table converted from DIA-NN report
+
+  peptide_tsv:
+    type: File?
+    outputBinding:
+      glob: "results/$(inputs.output_basename)_peptide.tsv"
+    doc: Philosopher peptide-level report
+
+  protein_tsv:
+    type: File?
+    outputBinding:
+      glob: "results/$(inputs.output_basename)_protein.tsv"
+    doc: Philosopher protein-level report
+
