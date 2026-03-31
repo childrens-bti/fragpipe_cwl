@@ -11,6 +11,8 @@ baseCommand: [bash, /opt/scripts/fragpipe-headless.sh]
 
 requirements:
   InlineJavascriptRequirement: {}
+  NetworkAccess:
+    networkAccess: true
   DockerRequirement:
     dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest"
   InplaceUpdateRequirement:
