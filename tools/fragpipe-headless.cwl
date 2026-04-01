@@ -64,29 +64,29 @@ outputs:
   results_dir:
     type: Directory
     outputBinding:
-      glob: "results"
+      glob: "$(inputs.output_basename)_results"
     doc: Full FragPipe results directory, including per-sample intermediate folders/files
 
   combined_protein:
     type: File?
     outputBinding:
-      glob: "results/$(inputs.output_basename)_combined_protein.tsv"
+      glob: "$(inputs.output_basename)_results/$(inputs.output_basename)_combined_protein.tsv"
     doc: Combined protein quantification results
 
   combined_peptide:
     type: File?
     outputBinding:
-      glob: "results/$(inputs.output_basename)_combined_peptide.tsv"
+      glob: "$(inputs.output_basename)_results/$(inputs.output_basename)_combined_peptide.tsv"
     doc: Combined peptide quantification results
 
   workflow_file_out:
     type: File?
     outputBinding:
-      glob: "results/$(inputs.output_basename)_fragpipe.workflow"
+      glob: "$(inputs.output_basename)_results/$(inputs.output_basename)_fragpipe.workflow"
     doc: FragPipe workflow configuration used
 
   manifest_file_out:
     type: File?
     outputBinding:
-      glob: "results/$(inputs.output_basename)_fragpipe-files.fp-manifest"
+      glob: "$(inputs.output_basename)_results/$(inputs.output_basename)_fragpipe-files.fp-manifest"
     doc: FragPipe manifest file used
