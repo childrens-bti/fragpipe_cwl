@@ -1,0 +1,1 @@
+s3://bti-private-us-east-1-prd-impact-trial/source/Raw-Proteomics/IMPACT002/EasyPep/Rood_IMPACT_DDA_200ng_Astral2_012326_IO15_EasyPep_IMP002_01.raw	Rood_IMPACT_DDA_200ng_Astral2_012326_IO15_EasyPep_IMP002_01		DDA
