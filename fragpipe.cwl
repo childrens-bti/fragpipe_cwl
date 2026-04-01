@@ -67,15 +67,30 @@ inputs:
     doc: Optional control-run combined peptide table used to remove overlapping peptides
 
 outputs:
+  results_dir:
+    type: Directory
+    outputSource: run_fragpipe/results_dir
+    doc: Full FragPipe results directory, including per-sample intermediate folders/files
+
   combined_protein:
     type: File?
     outputSource: run_fragpipe/combined_protein
     doc: Combined protein quantification results
-    
+
   combined_peptide:
     type: File?
     outputSource: run_fragpipe/combined_peptide
     doc: Combined peptide quantification results
+
+  workflow_file_out:
+    type: File?
+    outputSource: run_fragpipe/workflow_file_out
+    doc: FragPipe workflow configuration used
+
+  manifest_file_out:
+    type: File?
+    outputSource: run_fragpipe/manifest_file_out
+    doc: FragPipe manifest file used
 
   filtered_combined_peptide:
     type: File?
@@ -96,56 +111,6 @@ outputs:
     type: File?
     outputSource: filter_control_peptides/control_overlap_summary
     doc: Summary statistics for control-overlap filtering
-
-  combined_modified_peptide:
-    type: File?
-    outputSource: run_fragpipe/combined_modified_peptide
-    doc: Combined modified peptide quantification results
-    
-  combined_ion:
-    type: File?
-    outputSource: run_fragpipe/combined_ion
-    doc: Combined ion quantification results
-
-  tmt_report:
-    type: Directory?
-    outputSource: run_fragpipe/tmt_report
-    doc: TMT reporter ion quantification results
-
-  workflow_file_out:
-    type: File?
-    outputSource: run_fragpipe/workflow_file_out
-    doc: FragPipe workflow configuration used
-
-  fragger_params:
-    type: File?
-    outputSource: run_fragpipe/fragger_params
-    doc: MSFragger parameter file
-
-  tmt_integrator_conf:
-    type: File?
-    outputSource: run_fragpipe/tmt_integrator_conf
-    doc: TMT-Integrator configuration file
-
-  experiment_annotation:
-    type: File?
-    outputSource: run_fragpipe/experiment_annotation
-    doc: Experiment annotation file
-
-  sdrf_file:
-    type: File?
-    outputSource: run_fragpipe/sdrf_file
-    doc: SDRF metadata file
-
-  manifest_file_out:
-    type: File?
-    outputSource: run_fragpipe/manifest_file_out
-    doc: FragPipe manifest file used
-
-  log_file:
-    type: File?
-    outputSource: run_fragpipe/log_file
-    doc: FragPipe execution log file
 
 steps:
   # Step 1a: Convert .raw files to mzML (if input is .raw)
@@ -220,18 +185,11 @@ steps:
         source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
         pickValue: first_non_null
     out:
+      - results_dir
       - combined_protein
       - combined_peptide
-      - combined_modified_peptide
-      - combined_ion
-      - tmt_report
       - workflow_file_out
-      - fragger_params
-      - tmt_integrator_conf
-      - experiment_annotation
-      - sdrf_file
       - manifest_file_out
-      - log_file
 
   # Step 5: Optional filtering to remove peptides observed in control runs
   filter_control_peptides:
