@@ -72,26 +72,6 @@ outputs:
     outputSource: run_fragpipe/results_dir
     doc: Full FragPipe results directory, including per-sample intermediate folders/files
 
-  combined_protein:
-    type: File?
-    outputSource: run_fragpipe/combined_protein
-    doc: Combined protein quantification results
-
-  combined_peptide:
-    type: File?
-    outputSource: run_fragpipe/combined_peptide
-    doc: Combined peptide quantification results
-
-  workflow_file_out:
-    type: File?
-    outputSource: run_fragpipe/workflow_file_out
-    doc: FragPipe workflow configuration used
-
-  manifest_file_out:
-    type: File?
-    outputSource: run_fragpipe/manifest_file_out
-    doc: FragPipe manifest file used
-
   filtered_combined_peptide:
     type: File?
     outputSource: filter_control_peptides/filtered_combined_peptide
@@ -218,5 +198,5 @@ hints:
   value: "m5.8xlarge"
 
 "sbg:links":
-- id: "https://github.com/childrens-bti/fragpipe_cwl/tree/feature/handle_.raw_input" # will update with stable release
+- id: "https://github.com/childrens-bti/fragpipe_cwl" # update with stable release in Cavatica
   label: github-release
