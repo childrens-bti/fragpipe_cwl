@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Handle wine prefix ownership - wine is strict about this
-# If /wineprefix64 exists and is writable, try to use it
-# Otherwise copy it to /tmp where current user owns it
+# Always isolate Wine per worker so restarted tasks never contend on /tmp/.wine-<uid>.
 CURRENT_UID=$(id -u)
 WINEPREFIX_OWNER_UID=$(stat -c '%u' /wineprefix64 2>/dev/null || echo "unknown")
-
-if [ "$CURRENT_UID" = "1000" ] && [ "$WINEPREFIX_OWNER_UID" = "1000" ]; then
-  # Local EC2: user is 1000 and owns /wineprefix64
-  export WINEPREFIX=/wineprefix64
-else
-  # Non-local environment: process_file() will create isolated worker Wine state.
-  echo "Using per-worker Wine isolation (current uid: $CURRENT_UID, owner uid: $WINEPREFIX_OWNER_UID)"
-fi
+echo "Using per-worker Wine isolation (current uid: $CURRENT_UID, owner uid: $WINEPREFIX_OWNER_UID)"
 
 export WINEARCH=win64
 export WINEDEBUG=-all
@@ -53,23 +44,19 @@ process_file() {
   local worker_wineprefix=""
   local worker_tmpdir=""
 
-  # Per-run isolation alone is not enough for parallel workers on Cavatica.
-  # Give each worker its own Wine state when not in the local EC2 uid/owner path.
-  if [[ "$CURRENT_UID" != "1000" ]] || [[ "$WINEPREFIX_OWNER_UID" != "1000" ]]; then
-    worker_tmpdir="$(mktemp -d /tmp/wine-tmp.XXXXXX)"
-    worker_wineprefix="$(mktemp -d /tmp/wineprefix.XXXXXX)"
+  worker_tmpdir="$(mktemp -d /tmp/wine-tmp.XXXXXX)"
+  worker_wineprefix="$(mktemp -d /tmp/wineprefix.XXXXXX)"
 
-    if [ -d /wineprefix64 ]; then
-      cp -r /wineprefix64/. "$worker_wineprefix" 2>/dev/null || {
-        echo "WARNING: Could not copy /wineprefix64 for worker, using fresh prefix"
-      }
-    fi
-
-    cleanup_worker_wine() {
-      rm -rf "$worker_wineprefix" "$worker_tmpdir" 2>/dev/null || true
+  if [ -d /wineprefix64 ]; then
+    cp -r /wineprefix64/. "$worker_wineprefix" 2>/dev/null || {
+      echo "WARNING: Could not copy /wineprefix64 for worker, using fresh prefix"
     }
-    trap cleanup_worker_wine RETURN
   fi
+
+  cleanup_worker_wine() {
+    rm -rf "$worker_wineprefix" "$worker_tmpdir" 2>/dev/null || true
+  }
+  trap cleanup_worker_wine RETURN
 
   # subset filter: only paths containing the subset pattern
   if [[ "$RUN_SUBSET" == "true" && "$file" != */$SUBSET_PATTERN/* ]]; then
@@ -108,27 +95,15 @@ process_file() {
     echo "Already exists: $mzml_out"
   else
     echo "Converting: $file -> $mzml_out"
-    if [[ -n "$worker_wineprefix" ]]; then
-      TMPDIR="$worker_tmpdir" WINEPREFIX="$worker_wineprefix" wine msconvert --64 --zlib \
-        --filter "peakPicking" \
-        --filter "zeroSamples removeExtra 1-" \
-        --outdir "$out_exp_dir" \
-        "$file" > "$log_file" 2>&1 || {
-          echo "ERROR: Conversion failed for $file (see $log_file)" >&2
-          cat "$log_file" >&2
-          exit 1
-        }
-    else
-      wine msconvert --64 --zlib \
-        --filter "peakPicking" \
-        --filter "zeroSamples removeExtra 1-" \
-        --outdir "$out_exp_dir" \
-        "$file" > "$log_file" 2>&1 || {
-          echo "ERROR: Conversion failed for $file (see $log_file)" >&2
-          cat "$log_file" >&2
-          exit 1
-        }
-    fi
+    TMPDIR="$worker_tmpdir" XDG_RUNTIME_DIR="$worker_tmpdir" WINEPREFIX="$worker_wineprefix" wine msconvert --64 --zlib \
+      --filter "peakPicking" \
+      --filter "zeroSamples removeExtra 1-" \
+      --outdir "$out_exp_dir" \
+      "$file" > "$log_file" 2>&1 || {
+        echo "ERROR: Conversion failed for $file (see $log_file)" >&2
+        cat "$log_file" >&2
+        exit 1
+      }
   fi
 
   # Copy annotation if present

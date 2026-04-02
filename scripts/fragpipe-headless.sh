@@ -18,7 +18,7 @@ mkdir -p "$HOME/.config/FragPipe" "$HOME/.cache"
 
 FRAGPIPE_BIN="$RUNTIME_DIR/bin/fragpipe"
 FRAGPIPE_TOOLS="$RUNTIME_DIR/tools"
-RESULTS_DIR="results"
+RESULTS_DIR="${OUTPUT_BASENAME}_results"
 RESULTS_DIR="$(cd "$(pwd)" && echo "$(pwd)/$RESULTS_DIR")"
 mkdir -p "$RESULTS_DIR"
 

@@ -12,7 +12,7 @@ baseCommand: [bash, /opt/scripts/filter-canonical-peptides.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22"
   InitialWorkDirRequirement:
     listing:
       - $(inputs.query_fasta)

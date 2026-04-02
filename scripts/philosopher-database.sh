@@ -33,4 +33,4 @@ fi
 cp "$output_file" decoys-contam-custom.fasta.fas
 
 # Clean workspace
-"$PHIL_BIN" workspace --clean
+# "$PHIL_BIN" workspace --clean
