@@ -1,4 +1,4 @@
-# Workflow: LFQ-MBR (customized - fdr 0.1)
+# Workflow: LFQ-MBR (customized - fdr 0.05)
 
 crystalc.run-crystalc=false
 database.decoy-tag=rev_
