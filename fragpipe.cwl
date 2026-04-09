@@ -66,6 +66,11 @@ inputs:
     default: null
     doc: Optional control-run combined peptide table used to remove overlapping peptides
 
+  run_pdv:
+    type: boolean
+    default: false
+    doc: If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv
+
 outputs:
   results_dir:
     type: Directory
@@ -91,6 +96,11 @@ outputs:
     type: File?
     outputSource: filter_control_peptides/control_overlap_summary
     doc: Summary statistics for control-overlap filtering
+
+  pdv_spectra_dir:
+    type: Directory?
+    outputSource: run_pdv_plots/pdv_spectra_dir
+    doc: Optional PDV spectrum plot directory built from filtered combined peptides
 
 steps:
   # Step 1a: Convert .raw files to mzML (if input is .raw)
@@ -184,6 +194,22 @@ steps:
       - input_tumor_specific_peptides
       - control_tumor_specific_peptides
       - control_overlap_summary
+
+  # Step 6: Optional PDV plotting for control-filtered peptides
+  run_pdv_plots:
+    run: tools/fragpipe-pdv.cwl
+    when: $(inputs.run_pdv === true && inputs.control_combined_peptide !== null)
+    in:
+      run_pdv: run_pdv
+      control_combined_peptide: control_combined_peptide
+      results_dir: run_fragpipe/results_dir
+      mzml_directory:
+        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
+        pickValue: first_non_null
+      target_peptide_table: filter_control_peptides/filtered_combined_peptide
+      output_basename: output_basename
+    out:
+      - pdv_spectra_dir
 
 
 $namespaces:
