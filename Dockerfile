@@ -18,6 +18,7 @@ RUN apt-get -y update --fix-missing \
         tar \
         fuse \
         man-db \
+        xvfb \
         openjdk-17-jdk \
         dotnet-runtime-6.0 \
         build-essential \
@@ -80,6 +81,15 @@ WORKDIR /fragpipe_bin
 RUN wget https://github.com/Nesvilab/FragPipe/releases/download/22.0/FragPipe-22.0.zip -P fragPipe-22.0 \
     && unzip fragPipe-22.0/FragPipe-22.0.zip -d fragPipe-22.0 \
     && chmod -R 777 /fragpipe_bin
+
+# Install original PDV release for batch plotting.
+ARG PDV_VERSION=2.2.3
+RUN mkdir -p /opt/pdv \
+    && wget "https://github.com/wenbostar/PDV/releases/download/v${PDV_VERSION}/PDV-${PDV_VERSION}.zip" -O /tmp/PDV-${PDV_VERSION}.zip \
+    && unzip /tmp/PDV-${PDV_VERSION}.zip -d /opt/pdv \
+    && ln -sf /opt/pdv/PDV-${PDV_VERSION}/PDV-${PDV_VERSION}.jar /opt/pdv/PDV.jar \
+    && chmod -R 777 /opt/pdv \
+    && rm -f /tmp/PDV-${PDV_VERSION}.zip
 
 # Set environment variables
 ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"

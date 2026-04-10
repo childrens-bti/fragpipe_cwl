@@ -16,7 +16,8 @@ fragpipe_cwl/
 │   ├── filter-control-peptides.cwl   # Optional control-overlap peptide filtering
 │   ├── gunzip-mzml.cwl               # Decompress mzML files and generate manifest
 │   ├── copy-mzml.cwl                 # Copy uncompressed mzML files
-│   └── fragpipe-headless.cwl         # Main FragPipe execution
+│   ├── fragpipe-headless.cwl         # Main FragPipe execution
+│   └── fragpipe-pdv.cwl              # Optional PDV batch plotting
 ├── scripts/                          # Shell scripts called by CWL tools
 │   ├── detect-input-type.sh          # Detect .raw, .mzML.gz, or .mzML files
 │   ├── msconvert-raw.sh              # Raw file conversion with msconvert
@@ -26,6 +27,7 @@ fragpipe_cwl/
 │   ├── gunzip-mzml.sh                # mzML decompression with TMT annotation support
 │   ├── copy-mzml.sh                  # Copy mzML files with manifest generation
 │   ├── fragpipe-headless.sh          # FragPipe headless execution
+│   ├── fragpipe-pdv.py               # PDV plotting from filtered peptides
 │   └── sbfs-mount.sh                 # SBFS mount utility (standalone)
 ├── params/                           # Input parameter files
 │   └── fragpipe-inputs.yml           # Example input parameters
@@ -53,6 +55,7 @@ FragPipe supports a comprehensive set of workflow configurations available in th
 3. **Filter canonical peptides**: Remove canonical peptides by gene symbols
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
 5. **Optional control-overlap filtering**: Build tumor-specific input/control sets from non-canonical, non-decoy peptides, apply mutation-position overlap gating (`peptMutPos` / `Protein_fusion_site`; splice IDs exempt), then remove input peptides overlapping control peptides (exact match or containment)
+6. **Optional PDV plotting**: Use original PDV CLI to generate spectrum PDFs for peptides in `*_combined_peptide_control_filtered.tsv`
 
 See [Key Features](#key-features) section below for complete feature list.
 
@@ -186,6 +189,9 @@ control_combined_peptide:
 
 run_subset: false
 subset_pattern: ""
+
+# Optional: run PDV spectrum plotting for filtered peptides
+run_pdv: false
 ```
 
 **For .raw files:**
@@ -376,6 +382,8 @@ Auto-generate new manifest with full local paths
 - FragPipe 22.0 at `/fragpipe_bin/fragPipe-22.0/fragpipe/`
 - Philosopher v5.1.1 at `/fragpipe_bin/fragPipe-22.0/fragpipe/tools/Philosopher/philosopher-v5.1.1`
 - MSFragger and other FragPipe tools
+- Original PDV 2.2.3 at `/opt/pdv/PDV.jar` for batch spectrum plotting
+- `xvfb-run` for virtual-display execution of PDV CLI inside Docker
 - Shell scripts at `/opt/impact_trial/scripts/`
 
 **For .raw file conversion**, you also need:
@@ -419,6 +427,9 @@ outputs/
 ├── SAMPLE001_input_tumor_specific_peptides.tsv     # Input tumor-specific rows after mutation-position gating (optional)
 ├── SAMPLE001_control_tumor_specific_peptides.tsv   # Control tumor-specific rows after mutation-position gating (optional)
 ├── SAMPLE001_control_overlap_summary.txt           # Control-filter summary including mutation/overlap counts (optional)
+├── SAMPLE001_pdv_spectra/                          # PDV batch output directory (optional)
+│   ├── <sample_name>/                              # Per-sample PDV PDFs and scan list
+│   └── pdv_summary.tsv                             # Run-level summary (peptide/scans plotted)
 ├── SAMPLE001_combined_modified_peptide.tsv     # Modified peptide quantification
 ├── SAMPLE001_combined_ion.tsv                  # Ion-level quantification
 ├── SAMPLE001_fragger.params                    # MSFragger parameter file used
