@@ -61,6 +61,12 @@ inputs:
     doc: Directory containing decompressed mzML files
 
 outputs:
+  mzml_directory_out:
+    type: Directory
+    outputBinding:
+      glob: "$(inputs.mzml_directory.basename)"
+    doc: Updated staged mzML directory after FragPipe execution
+
   results_dir:
     type: Directory
     outputBinding:

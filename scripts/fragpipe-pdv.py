@@ -173,6 +173,12 @@ def main() -> None:
     if not pdv_jar.exists():
         raise FileNotFoundError(f"PDV jar not found: {pdv_jar}")
 
+    # In some CWL staging layouts, the passed results_dir may resolve to the
+    # job root while the actual FragPipe results live in <root>/<basename>.
+    staged_results_dir = results_dir / f"{args.output_basename}_results"
+    if not results_dir.name.endswith("_results") and staged_results_dir.exists():
+        results_dir = staged_results_dir
+
     target_peptides = read_target_peptides(peptide_table)
     psm_files = find_results_samples(results_dir)
     if not psm_files:

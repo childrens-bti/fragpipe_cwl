@@ -175,6 +175,7 @@ steps:
         source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
         pickValue: first_non_null
     out:
+      - mzml_directory_out
       - results_dir
       - combined_protein
       - combined_peptide
@@ -203,9 +204,7 @@ steps:
       run_pdv: run_pdv
       control_combined_peptide: control_combined_peptide
       results_dir: run_fragpipe/results_dir
-      mzml_directory:
-        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
-        pickValue: first_non_null
+      mzml_directory: run_fragpipe/mzml_directory_out
       target_peptide_table: filter_control_peptides/filtered_combined_peptide
       output_basename: output_basename
     out:
