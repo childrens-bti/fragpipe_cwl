@@ -118,7 +118,7 @@ process_file() {
 }
 
 # Export variables and function for parallel
-export SOURCE_DIR_ABS OUT_DIR RUN_SUBSET SUBSET_PATTERN CURRENT_UID WINEPREFIX_OWNER_UID
+export SOURCE_DIR_ABS OUT_DIR RUN_SUBSET SUBSET_PATTERN CURRENT_UID WINEPREFIX_OWNER_UID SCAN_TIME_FILTER
 export -f process_file
 
 # Read manifest and collect files to process
