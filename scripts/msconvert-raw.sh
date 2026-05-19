@@ -14,7 +14,7 @@ SOURCE_DIR="$1"
 RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
-NUM_CORES="${5:-12}"  # Default to 12 cores
+NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
 OUT_DIR="$(pwd)/mzml_files"
 
 # Ensure output path is a directory
