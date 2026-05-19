@@ -52,12 +52,12 @@ inputs:
     doc: Number of parallel msconvert processes (default uses runtime.cores)
     inputBinding:
       position: 5
-      valueFrom: $(self || runtime.cores || 12)
+      valueFrom: $(self || Math.min(runtime.cores || 12, 4))
 
 hints:
   ResourceRequirement:
-    coresMin: 12
-    ramMin: 32768
+    coresMin: 4
+    ramMin: 131072
 
 outputs:
   mzml_directory:
