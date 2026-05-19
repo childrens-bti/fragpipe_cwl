@@ -52,7 +52,7 @@ inputs:
     doc: Number of parallel msconvert processes (default uses runtime.cores)
     inputBinding:
       position: 5
-      valueFrom: $(self || Math.min(runtime.cores || 12, 4))
+      valueFrom: $(self || 2)
 
 hints:
   ResourceRequirement:
