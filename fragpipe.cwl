@@ -71,6 +71,11 @@ inputs:
     default: false
     doc: If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv
 
+  num_cores:
+    type: int
+    default: 8
+    doc: Number of parallel processes for msconvert .raw file conversion
+
 outputs:
   results_dir:
     type: Directory
@@ -115,6 +120,7 @@ steps:
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
+      num_cores: num_cores
     out: [mzml_directory, mzml_file_list, mzml_manifest]
 
   # Step 1b: Gunzip mzML files (if input is .mzML.gz)
