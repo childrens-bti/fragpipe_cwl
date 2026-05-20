@@ -56,7 +56,7 @@ inputs:
 
 hints:
   ResourceRequirement:
-    coresMin: 4
+    coresMin: 12
     ramMin: 131072
 
 outputs:
