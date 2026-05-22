@@ -61,7 +61,12 @@ process_file() {
   sanitize_annotation() {
     local src="$1"
     local dst="$2"
-    awk '{ sub(/\r$/, "") } /^[[:space:]]*#/ { next } /^[[:space:]]*$/ { next } { print }' "$src" > "$dst"
+    awk 'BEGIN{IGNORECASE=1}
+         { sub(/\r$/, "") }
+         /^[[:space:]]*#/ { next }
+         /^[[:space:]]*$/ { next }
+         tolower($1)=="channel" && tolower($2)=="sample" { next }
+         { print }' "$src" > "$dst"
     if ! awk -F'\t' 'NF >= 2 { ok=1; exit } END { exit(ok ? 0 : 1) }' "$dst"; then
       echo "WARNING: annotation.txt for experiment '$exp_name' has no 2-column rows after sanitization; using original file" >&2
       cp -f "$src" "$dst"

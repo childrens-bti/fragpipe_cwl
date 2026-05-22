@@ -109,7 +109,12 @@ process_file() {
   # Copy annotation if present
   if [ -f "$exp_src_dir/annotation.txt" ]; then
     annotation_dst="$out_exp_dir/annotation.txt"
-    awk '{ sub(/\r$/, "") } /^[[:space:]]*#/ { next } /^[[:space:]]*$/ { next } { print }' "$exp_src_dir/annotation.txt" > "$annotation_dst" 2>/dev/null || true
+    awk 'BEGIN{IGNORECASE=1}
+         { sub(/\r$/, "") }
+         /^[[:space:]]*#/ { next }
+         /^[[:space:]]*$/ { next }
+         tolower($1)=="channel" && tolower($2)=="sample" { next }
+         { print }' "$exp_src_dir/annotation.txt" > "$annotation_dst" 2>/dev/null || true
     if ! awk -F'\t' 'NF >= 2 { ok=1; exit } END { exit(ok ? 0 : 1) }' "$annotation_dst" 2>/dev/null; then
       cp "$exp_src_dir/annotation.txt" "$annotation_dst" 2>/dev/null || true
     fi
