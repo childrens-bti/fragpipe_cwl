@@ -59,10 +59,20 @@ process_file() {
   local out_exp_dir="$OUT_DIR/$exp_name"
   mkdir -p "$out_exp_dir"
 
+  sanitize_annotation() {
+    local src="$1"
+    local dst="$2"
+    awk '{ sub(/\r$/, "") } /^[[:space:]]*#/ { next } /^[[:space:]]*$/ { next } { print }' "$src" > "$dst"
+    if ! awk -F'\t' 'NF >= 2 { ok=1; exit } END { exit(ok ? 0 : 1) }' "$dst"; then
+      echo "WARNING: annotation.txt for experiment '$exp_name' has no 2-column rows after sanitization; using original file" >&2
+      cp -f "$src" "$dst"
+    fi
+  }
+
   # Copy annotation.txt for THIS experiment into its folder (only once)
   if [[ -f "$exp_src_dir/annotation.txt" && ! -f "$out_exp_dir/annotation.txt" ]]; then
     echo "Copying annotation.txt for experiment '$exp_name' from $exp_src_dir"
-    cp -f "$exp_src_dir/annotation.txt" "$out_exp_dir/annotation.txt"
+    sanitize_annotation "$exp_src_dir/annotation.txt" "$out_exp_dir/annotation.txt"
   fi
 
   echo "Copying $(basename "$file_abs") -> $out_exp_dir/"
