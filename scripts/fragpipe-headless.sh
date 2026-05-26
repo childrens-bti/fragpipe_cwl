@@ -30,12 +30,24 @@ WORKFLOW_MODIFIED="$(pwd)/workflow_modified.workflow"
 awk -v db="database.db-path=$FASTA_ABS" 'BEGIN{done=0} /^database\.db-path=/{if(!done){print db; done=1}; next} {print} END{if(!done) print db}' "$WORKFLOW_FILE" > "$WORKFLOW_MODIFIED"
 
 # Run FragPipe in headless mode (FragPipe writes its own log file in the workdir)
+RUN_LOG="$(pwd)/fragpipe-headless.runtime.log"
+set +e
 "$FRAGPIPE_BIN" \
   --headless \
   --workflow "$WORKFLOW_MODIFIED" \
   --manifest "$MANIFEST_FILE" \
   --workdir "$RESULTS_DIR" \
-  --config-tools-folder "$FRAGPIPE_TOOLS"
+  --config-tools-folder "$FRAGPIPE_TOOLS" 2>&1 | tee "$RUN_LOG"
+FRAGPIPE_EXIT=${PIPESTATUS[0]}
+set -e
+
+if [ "$FRAGPIPE_EXIT" -ne 0 ]; then
+  echo "FragPipe failed with exit code $FRAGPIPE_EXIT" >&2
+  echo "===== Last 120 lines from fragpipe-headless.runtime.log =====" >&2
+  tail -n 120 "$RUN_LOG" >&2 || true
+  echo "===== End log tail =====" >&2
+  exit "$FRAGPIPE_EXIT"
+fi
 
 # Rename output files with output_basename prefix
 if [ -n "$OUTPUT_BASENAME" ]; then
