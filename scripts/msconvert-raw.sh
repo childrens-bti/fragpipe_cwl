@@ -9,6 +9,9 @@ echo "Using per-worker Wine isolation (current uid: $CURRENT_UID, owner uid: $WI
 export WINEARCH=win64
 export WINEDEBUG=-all
 
+# Apply the same retention-time window to all RAW conversions.
+SCAN_TIME_FILTER="scanTime [0,2100]"
+
 # Usage: msconvert-raw.sh <SOURCE_DIR> <RUN_SUBSET> <SUBSET_PATTERN> <MANIFEST_FILE> [NUM_CORES]
 SOURCE_DIR="$1"
 RUN_SUBSET="$2"
@@ -95,8 +98,10 @@ process_file() {
     echo "Already exists: $mzml_out"
   else
     echo "Converting: $file -> $mzml_out"
+    echo "Applying global scanTime filter [$SCAN_TIME_FILTER] for $basename_no_ext"
     TMPDIR="$worker_tmpdir" XDG_RUNTIME_DIR="$worker_tmpdir" WINEPREFIX="$worker_wineprefix" wine msconvert --64 --zlib \
       --filter "peakPicking" \
+      --filter "$SCAN_TIME_FILTER" \
       --filter "zeroSamples removeExtra 1-" \
       --outdir "$out_exp_dir" \
       "$file" > "$log_file" 2>&1 || {
@@ -113,7 +118,7 @@ process_file() {
 }
 
 # Export variables and function for parallel
-export SOURCE_DIR_ABS OUT_DIR RUN_SUBSET SUBSET_PATTERN CURRENT_UID WINEPREFIX_OWNER_UID
+export SOURCE_DIR_ABS OUT_DIR RUN_SUBSET SUBSET_PATTERN CURRENT_UID WINEPREFIX_OWNER_UID SCAN_TIME_FILTER
 export -f process_file
 
 # Read manifest and collect files to process
