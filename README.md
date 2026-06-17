@@ -386,6 +386,10 @@ Auto-generate new manifest with full local paths
 - `xvfb-run` for virtual-display execution of PDV CLI inside Docker
 - Shell scripts at `/opt/impact_trial/scripts/`
 
+**License-required tools in the main FragPipe image:**
+- **IonQuant**, **MSFragger**, and **diaTracer** (download/license details: [FragPipe wiki](https://github.com/rokitalab/fragpipe/wiki))
+- License instruction status: required wiki instructions were followed and corresponding license agreements/download steps were completed
+
 **For .raw file conversion**, you also need:
 - **MSConvert Docker Image**: `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses`
   - Contains ProteoWizard msconvert tool
