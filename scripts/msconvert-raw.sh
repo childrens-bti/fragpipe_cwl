@@ -14,7 +14,7 @@ SOURCE_DIR="$1"
 RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
-NUM_CORES="${5:-12}"  # Default to 12 cores
+NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
 OUT_DIR="$(pwd)/mzml_files"
 
 # Ensure output path is a directory
@@ -108,7 +108,16 @@ process_file() {
 
   # Copy annotation if present
   if [ -f "$exp_src_dir/annotation.txt" ]; then
-    cp "$exp_src_dir/annotation.txt" "$out_exp_dir/" 2>/dev/null || true
+    annotation_dst="$out_exp_dir/annotation.txt"
+    awk 'BEGIN{IGNORECASE=1}
+         { sub(/\r$/, "") }
+         /^[[:space:]]*#/ { next }
+         /^[[:space:]]*$/ { next }
+         tolower($1)=="channel" && tolower($2)=="sample" { next }
+         { print }' "$exp_src_dir/annotation.txt" > "$annotation_dst" 2>/dev/null || true
+    if ! awk -F'\t' 'NF >= 2 { ok=1; exit } END { exit(ok ? 0 : 1) }' "$annotation_dst" 2>/dev/null; then
+      cp "$exp_src_dir/annotation.txt" "$annotation_dst" 2>/dev/null || true
+    fi
   fi
 }
 

@@ -48,16 +48,16 @@ inputs:
       position: 4
 
   num_cores:
-    type: int?
-    doc: Number of parallel msconvert processes (default uses runtime.cores)
+    type: int
+    default: 8
+    doc: Number of parallel msconvert processes
     inputBinding:
       position: 5
-      valueFrom: $(self || runtime.cores || 12)
 
 hints:
   ResourceRequirement:
     coresMin: 12
-    ramMin: 32768
+    ramMin: 131072
 
 outputs:
   mzml_directory:

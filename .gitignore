@@ -40,10 +40,11 @@ sbg-hints/*
 # harmonized data
 data/*
 !data/.gitkeep
-!data/manifest_files/
-!data/manifest_files/**
 !data/workflow_files/
-!data/workflow_files/**
+data/workflow_files/*
+!data/workflow_files/impact-LFQ-MBR_v22_phi-prot1.workflow.txt
+!data/workflow_files/PDC000180_proteome_TMT11.mod.v22.workflow.txt
+!data/workflow_files/HOPE_proteome_TMT11.mod.v22.workflow.txt
 # manifest files
 manifests/*
 !manifests/.gitkeep

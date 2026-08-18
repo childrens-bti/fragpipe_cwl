@@ -14,9 +14,7 @@ awk '
 }' "$query_fasta" | sort -u > splice_event_genes.txt
 
 # snv genes
-awk -F '|' '{print $3}' "$query_fasta" \
-| grep -v '^$' \
-| grep -v '\^ENS' \
+awk -F '|' '$3 != "" && $3 !~ /\^ENS/ {print $3}' "$query_fasta" \
 | sort \
 | uniq > snv_genes.txt
 

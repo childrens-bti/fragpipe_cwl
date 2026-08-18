@@ -58,10 +58,25 @@ process_file() {
   local out_exp_dir="$OUT_DIR/$exp_name"
   mkdir -p "$out_exp_dir"
 
+  sanitize_annotation() {
+    local src="$1"
+    local dst="$2"
+    awk 'BEGIN{IGNORECASE=1}
+         { sub(/\r$/, "") }
+         /^[[:space:]]*#/ { next }
+         /^[[:space:]]*$/ { next }
+         tolower($1)=="channel" && tolower($2)=="sample" { next }
+         { print }' "$src" > "$dst"
+    if ! awk -F'\t' 'NF >= 2 { ok=1; exit } END { exit(ok ? 0 : 1) }' "$dst"; then
+      echo "WARNING: annotation.txt for experiment '$exp_name' has no 2-column rows after sanitization; using original file" >&2
+      cp -f "$src" "$dst"
+    fi
+  }
+
   # Copy annotation.txt for THIS experiment into its folder (only once)
   if [[ -f "$exp_src_dir/annotation.txt" && ! -f "$out_exp_dir/annotation.txt" ]]; then
     echo "Copying annotation.txt for experiment '$exp_name' from $exp_src_dir"
-    cp -f "$exp_src_dir/annotation.txt" "$out_exp_dir/annotation.txt"
+    sanitize_annotation "$exp_src_dir/annotation.txt" "$out_exp_dir/annotation.txt"
   fi
 
   echo "Decompressing $(basename "$file_abs") -> $out_exp_dir/"
@@ -80,15 +95,15 @@ fi
 echo "Using manifest file: $MANIFEST_FILE"
 # Read base names from 2nd column (tab-separated)
 mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{print $2}' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
-# Only process files in experiment subfolders (not directly under SOURCE_DIR)
-# For each manifest base name, find the first matching file in any subfolder (not in SOURCE_DIR itself)
+# Process files from both flat and nested layouts under SOURCE_DIR.
+# For each manifest base name, find the first matching file at any depth.
 for m in "${MANIFEST_BASENAMES[@]}"; do
-  # Find the first match in subfolders only (mindepth 2)
-  f=$(find "$SOURCE_DIR" -mindepth 2 -type f -name "$m.mzML.gz" | head -n 1)
+  # Find the first match at any depth (flat layout or experiment subfolders).
+  f=$(find "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
   if [[ -n "$f" ]]; then
     process_file "$f"
   else
-    echo "WARNING: No matching mzML.gz found for $m in subfolders of $SOURCE_DIR" >&2
+    echo "WARNING: No matching mzML.gz found for $m under $SOURCE_DIR" >&2
   fi
 done
 
