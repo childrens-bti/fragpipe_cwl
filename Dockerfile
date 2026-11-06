@@ -103,6 +103,9 @@ COPY tools/MSFragger-4.1.jar ${FRAGPIPE_TOOLS}/MSFragger-4.1.jar
 COPY tools/diaTracer-1.1.5.jar ${FRAGPIPE_TOOLS}/diaTracer-1.1.5.jar 
 COPY tools/IonQuant-1.10.27.jar ${FRAGPIPE_TOOLS}/IonQuant-1.10.27.jar
 
+# Copy MSFragger native readers (ext/bruker for timsTOF .d, ext/thermo for .raw) from the licensed MSFragger 4.1 zip
+COPY tools/ext/ ${FRAGPIPE_TOOLS}/ext/
+
 # Copy workflow scripts
 COPY scripts/  /opt/scripts/
 RUN chmod -R +rx /opt/scripts/ && chown -R 1000:1000 /opt/scripts/

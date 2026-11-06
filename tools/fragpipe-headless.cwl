@@ -58,7 +58,9 @@ inputs:
 
   mzml_directory:
     type: Directory
-    doc: Directory containing decompressed mzML files
+    doc: |
+      Staged spectra directory from the copy/conversion step: mzML files, or Bruker .d
+      directories for input_type "d" (the name predates .d support; see mzml_source_dir)
 
 outputs:
   mzml_directory_out:

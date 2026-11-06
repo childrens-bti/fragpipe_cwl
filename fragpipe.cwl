@@ -4,9 +4,9 @@ class: Workflow
 label: FragPipe Proteomics Pipeline
 doc: |
   Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
-  This workflow can process .raw, .mzML.gz, and .mzML files.
+  This workflow can process .raw, .mzML.gz, .mzML files, and Bruker timsTOF .d directories.
   It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
-  Input type must be specified: "raw", "mzml_gz", or "mzml".
+  Input type must be specified: "raw", "mzml_gz", "mzml", or "d".
 
 requirements:
   InlineJavascriptRequirement: {}
@@ -36,12 +36,22 @@ inputs:
   # mzML/raw source (mounted Cavatica or S3 directory)
   mzml_source_dir:
     type: Directory
-    doc: Directory containing input files (.raw, .mzML.gz, or .mzML)
+    doc: |
+      Directory containing input files (.raw, .mzML.gz, .mzML, or Bruker .d directories).
+      Note: the name predates .raw and .d support and is kept for compatibility with
+      existing params files and Cavatica tasks; a rename (e.g. input_source_dir) is planned.
 
   input_type:
     type: string
-    doc: Type of input files - must be one of "raw", "mzml_gz", or "mzml"
-    
+    doc: Type of input files - must be one of "raw", "mzml_gz", "mzml", or "d"
+
+  skip_canonical_filter:
+    type: boolean
+    default: false
+    doc: |
+      If true, skip removing canonical proteins of genes named in query_fasta headers,
+      so wild-type sequences stay in the database and compete with query sequences.
+
   run_subset:
     type: boolean
     default: false
@@ -150,7 +160,21 @@ steps:
       subset_pattern: subset_pattern
       manifest_file: manifest_file
     out: [mzml_directory, mzml_file_list, mzml_manifest]
-    
+
+  # Step 1d: Copy Bruker .d directories (if input is timsTOF .d)
+  copy_d:
+    run: tools/copy-d.cwl
+    when: $(inputs.input_type === "d")
+    in:
+      input_type: input_type
+      mzml_source_dir: mzml_source_dir
+      run_subset:
+        source: run_subset
+        valueFrom: '$(self ? "true" : "false")'
+      subset_pattern: subset_pattern
+      manifest_file: manifest_file
+    out: [mzml_directory, mzml_file_list, mzml_manifest]
+
   # Step 2: Add decoys and contaminants to FASTA
   prepare_database:
     run: tools/philosopher-database.cwl
@@ -159,26 +183,30 @@ steps:
       uniprot_canonical_fasta: uniprot_canonical_fasta
     out: [fasta_with_decoys]
     
-  # Step 3: Filter canonical peptides
+  # Step 3: Filter canonical peptides (skipped when skip_canonical_filter is true)
   filter_canonical:
     run: tools/filter-canonical-peptides.cwl
+    when: $(inputs.skip_canonical_filter !== true)
     in:
+      skip_canonical_filter: skip_canonical_filter
       query_fasta: query_fasta
       fasta_with_decoys: prepare_database/fasta_with_decoys
     out: [filtered_fasta, gene_symbols]
-    
+
   # Step 4: Run FragPipe headless
   run_fragpipe:
     run: tools/fragpipe-headless.cwl
     in:
-      filtered_fasta: filter_canonical/filtered_fasta
+      filtered_fasta:
+        source: [filter_canonical/filtered_fasta, prepare_database/fasta_with_decoys]
+        pickValue: first_non_null
       workflow_file: workflow_file
       output_basename: output_basename
       manifest_file:
-        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
+        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest, copy_d/mzml_manifest]
         pickValue: first_non_null
       mzml_directory:
-        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
+        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory, copy_d/mzml_directory]
         pickValue: first_non_null
     out:
       - mzml_directory_out

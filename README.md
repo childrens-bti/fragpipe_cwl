@@ -7,25 +7,25 @@ This directory contains Common Workflow Language (CWL) implementations of the [F
 ```
 fragpipe_cwl/
 ├── Dockerfile                         # Container with FragPipe and dependencies
-├── fragpipe.cwl                      # Main workflow (supports .raw, .mzML.gz, and .mzML)
+├── fragpipe.cwl                      # Main workflow (supports .raw, .mzML.gz, .mzML, and Bruker .d)
 ├── tools/                            # CWL CommandLineTool definitions
-│   ├── detect-input-type.cwl         # Auto-detect input file type
 │   ├── msconvert-raw.cwl             # Convert .raw to .mzML using msconvert
 │   ├── philosopher-database.cwl      # Add decoys/contaminants to FASTA
 │   ├── filter-canonical-peptides.cwl # Filter canonical peptides by gene symbols
 │   ├── filter-control-peptides.cwl   # Optional control-overlap peptide filtering
 │   ├── gunzip-mzml.cwl               # Decompress mzML files and generate manifest
 │   ├── copy-mzml.cwl                 # Copy uncompressed mzML files
+│   ├── copy-d.cwl                    # Copy Bruker timsTOF .d directories
 │   ├── fragpipe-headless.cwl         # Main FragPipe execution
 │   └── fragpipe-pdv.cwl              # Optional PDV batch plotting
 ├── scripts/                          # Shell scripts called by CWL tools
-│   ├── detect-input-type.sh          # Detect .raw, .mzML.gz, or .mzML files
 │   ├── msconvert-raw.sh              # Raw file conversion with msconvert
 │   ├── philosopher-database.sh       # Philosopher workspace and database prep
 │   ├── filter-canonical-peptides.sh  # Gene symbol extraction and filtering
 │   ├── filter-control-peptides.py    # Control-overlap peptide filtering logic
 │   ├── gunzip-mzml.sh                # mzML decompression with TMT annotation support
 │   ├── copy-mzml.sh                  # Copy mzML files with manifest generation
+│   ├── copy-d.sh                     # Copy .d directories with manifest generation
 │   ├── fragpipe-headless.sh          # FragPipe headless execution
 │   ├── fragpipe-pdv.py               # PDV plotting from filtered peptides
 │   └── sbfs-mount.sh                 # SBFS mount utility (standalone)
@@ -41,18 +41,18 @@ fragpipe_cwl/
 
 ### Main Workflow (`fragpipe.cwl`)
 
-The primary workflow that processes proteomics data from mounted directories or direct file inputs. **Now supports .raw, .mzML.gz, and .mzML files with automatic detection.**
+The primary workflow that processes proteomics data from mounted directories or direct file inputs. Supports .raw, .mzML.gz, .mzML, and Bruker timsTOF .d input; set the type with the required `input_type` parameter.
 
 FragPipe supports a comprehensive set of workflow configurations available in the [FragPipe workflows repository](https://github.com/Nesvilab/FragPipe/tree/develop/workflows), including workflows for various quantitation methods (TMT, SILAC, LFQ, DIA, iTRAQ), post-translational modifications (phosphorylation, ubiquitination, acetylation, glycosylation), and specialized analyses (HLA peptidome, ABPP, open search).
 
 **Steps:**
-0. **Detect input type**: Auto-detect whether input files are .raw, .mzML.gz, or .mzML
-1. **Convert/Process files** (conditionally based on detected type):
+1. **Convert/Process files** (one step runs, selected by `input_type`):
    - **Convert .raw to .mzML**: Use msconvert if input is .raw files
    - **Decompress .mzML.gz**: Gunzip if input is compressed mzML files
    - **Copy .mzML**: Direct copy if input is already uncompressed mzML
+   - **Copy .d**: Direct copy of Bruker timsTOF .d directories (read natively by MSFragger, no conversion)
 2. **Prepare database**: Add decoys and contaminants to custom FASTA using Philosopher
-3. **Filter canonical peptides**: Remove canonical peptides by gene symbols
+3. **Filter canonical peptides**: Remove canonical peptides by gene symbols (skip with `skip_canonical_filter: true` to keep wild-type sequences in the database)
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
 5. **Optional control-overlap filtering**: Build tumor-specific input/control sets from non-canonical, non-decoy peptides, apply mutation-position overlap gating (`peptMutPos` / `Protein_fusion_site`; splice IDs exempt), then remove input peptides overlapping control peptides (exact match or containment)
 6. **Optional PDV plotting**: Use original PDV CLI to generate spectrum PDFs for peptides in `*_combined_peptide_control_filtered.tsv`
@@ -79,7 +79,7 @@ cwltool --validate fragpipe.cwl
 
 ### Workflow Execution
 
-The workflow automatically detects your input file type (.raw, .mzML.gz, or .mzML) and processes accordingly. Follow these steps:
+Set `input_type` to match your files (`raw`, `mzml_gz`, `mzml`, or `d`); the workflow runs the matching copy/conversion step. Follow these steps:
 
 #### Step 1: Prepare Your Data
 
@@ -107,6 +107,15 @@ source_dir/
 ├── experiment_2/
 │   ├── sample_003.raw
 │   └── sample_004.raw
+```
+
+**For Bruker timsTOF .d directories** (flat or in experiment subfolders; `.d.zip` copies are ignored):
+```
+source_dir/
+├── run_001.d/
+│   ├── analysis.tdf
+│   └── analysis.tdf_bin
+└── run_002.d/
 ```
 
 #### Step 2: Create a Manifest File
@@ -230,6 +239,32 @@ input_type: "mzml_gz"  # Change only this parameter
 # ... rest same as .mzML example
 ```
 
+**For Bruker timsTOF .d directories:**
+```yaml
+input_type: "d"
+mzml_source_dir:
+  class: Directory
+  path: /path/to/source_dir       # Directory with <run>.d folders (flat or per-experiment subfolders)
+
+# HLA class I immunopeptidomics: nonspecific search, peptide length 8-15
+# (FragPipe 22.0 Nonspecific-HLA template with digest length changed from 7-25)
+workflow_file:
+  class: File
+  path: $(pwd)/data/workflow_files/Nonspecific-HLA-classI_v22.workflow.txt
+
+# Optional: keep canonical (wild-type) proteins of query genes in the database
+skip_canonical_filter: true
+# ... rest same as .mzML example
+```
+Manifest column 2 is the run name without `.d`; column 4 (`DDA` or `DIA`) is kept and defaults to `DDA`.
+
+Notes for `.d` input:
+- The image must include MSFragger's `ext/` folder (see [Docker Image](#docker-image)); without it MSFragger reports `Scans = 0`.
+- `run_pdv` is not supported yet: `fragpipe-pdv.py` looks for `<run>.mzML`, while `.d` runs only produce `<run>_uncalibrated.mzML`.
+- The control filter's mutation-position gating reads `peptMutPos` / `Protein_fusion_site` from query FASTA headers; peptides from custom FASTA entries without these tags (such as minigene constructs) are all kept, whether or not they cover a mutation.
+
+> **Note:** `mzml_source_dir` holds the input data for every `input_type` (`.raw`, `.mzML.gz`, `.mzML`, or `.d`), not only mzML. The name predates `.raw` and `.d` support and is kept so existing params files and Cavatica tasks keep working. A rename (e.g. `input_source_dir`) is planned as a separate change.
+
 #### Step 4: Run Workflow
 
 Execute the workflow with your chosen parameters file. See [Complete Examples](#complete-examples) section below for specific commands.
@@ -306,7 +341,7 @@ The manifest file has **4 tab-separated columns**:
 ### Important Notes
 
 1. **Column 1 is not used** - The workflow reads basenames from column 2 to locate files
-2. **Column 2 must match filenames exactly** (without extension)
+2. **Column 2 must match filenames exactly** (without extension; for `.d` input, the `.d` folder name without `.d`)
 3. **Manifest is auto-regenerated** - A new manifest with correct full paths is created before FragPipe execution
 
 ### Input Manifest Examples
@@ -362,10 +397,12 @@ Auto-generate new manifest with full local paths
 
 | Feature | Description |
 |---------|-------------|
-| **Automatic Input Detection** | Detects .raw, .mzML.gz, or .mzML files and routes to appropriate converter |
+| **Input Type Routing** | `input_type` (`raw`, `mzml_gz`, `mzml`, `d`) selects the matching conversion/copy step |
 | **Raw File Support** | Converts Thermo Fisher .raw files using msconvert from ProteoWizard |
-| **Automatic Manifest Generation** | Creates FragPipe manifest from processed files, no manual manifest needed |
-| **Subset Processing** | Process only first experiment (subfolder name) via `run_subset: true` |
+| **Bruker timsTOF Support** | `input_type: "d"` copies `.d` directories and searches them natively (no conversion); PDV plotting is not supported for `.d` yet |
+| **Optional Canonical Filter** | `skip_canonical_filter: true` keeps wild-type proteins in the database (e.g. minigene / immunopeptidomics searches) |
+| **Automatic Manifest Generation** | Builds the FragPipe manifest with local paths from the processed files; the input manifest (column 2 = run names) is still required |
+| **Subset Processing** | With `run_subset: true`, process only files under a folder named `subset_pattern` |
 | **TMT Annotation Support** | Automatically copies `annotation.txt` files from experiment directories |
 | **Dynamic FASTA Injection** | Workflow file updated at runtime with correct FASTA path |
 | **Mutation-Position Gating** | Optional control filter keeps variant/fusion peptides only when peptide `Start`-`End` overlaps `peptMutPos` or `Protein_fusion_site` (splice IDs exempt) |
@@ -376,7 +413,7 @@ Auto-generate new manifest with full local paths
 
 ## Docker Image
 
-**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest`
+**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22` (the tag referenced by every FragPipe tool in `tools/*.cwl`)
 
 **Contents:**
 - FragPipe 22.0 at `/fragpipe_bin/fragPipe-22.0/fragpipe/`
@@ -389,6 +426,7 @@ Auto-generate new manifest with full local paths
 **License-required tools in the main FragPipe image:**
 - **IonQuant**, **MSFragger**, and **diaTracer** (download/license details: [FragPipe wiki](https://github.com/rokitalab/fragpipe/wiki))
 - License instruction status: required wiki instructions were followed and corresponding license agreements/download steps were completed
+- **MSFragger native readers** (`ext/` folder from the licensed MSFragger 4.1 zip, including `ext/bruker/libtimsdata-2-21-0-4.so`): place at `tools/ext/` before building; required for Bruker `.d` input. `tools/ext/` is gitignored.
 
 **For .raw file conversion**, you also need:
 - **MSConvert Docker Image**: `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses`
@@ -398,15 +436,15 @@ Auto-generate new manifest with full local paths
 
 **Building:**
 ```bash
-docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest .
-docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest
+docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22 .
+docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22
 ```
 
 ## Requirements
 
 - **CWL Runner**: cwltool 3.1+ (for CWL v1.2 support including `InplaceUpdateRequirement`)
 - **Docker**: For containerized execution
-  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:latest`
+  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22`
   - MSConvert image (for .raw files): `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses` (auto-pulled)
 - **SBFS**: Seven Bridges File System (for local workflow with Cavatica mounts)
   - Requires `/etc/fuse.conf` with `user_allow_other` enabled
