@@ -415,7 +415,7 @@ Auto-generate new manifest with full local paths
 
 **Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0` (the tag referenced by every FragPipe tool in `tools/*.cwl`)
 
-**Image tags follow releases:** each fragpipe_cwl release pins its own image tag, named after the release (e.g. `v1.2.0`), because `scripts/` is built into the image. A release's tag is never overwritten. When `scripts/` or the `Dockerfile` changes, build and push a new tag and update `dockerPull` in `tools/*.cwl` to match. Releases before v1.2.0 use `fragpipe_v22`, which is kept at the pre-v1.2.0 image.
+**Image tags follow releases:** each fragpipe_cwl release pins its own image tag, named after the release (e.g. `v1.2.0`), because `scripts/` is built into the image. A release's tag is never overwritten. When `scripts/` or the `Dockerfile` changes, build and push a new tag and update `dockerPull` in `tools/*.cwl` to match. The MSConvert image follows the same rule (see below). Releases before v1.2.0 use `fragpipe_v22` and `pwiz-msconvert:latest`, which are kept at their pre-v1.2.0 images.
 
 **Contents:**
 - FragPipe 22.0 at `/fragpipe_bin/fragPipe-22.0/fragpipe/`
@@ -423,7 +423,7 @@ Auto-generate new manifest with full local paths
 - MSFragger and other FragPipe tools
 - Original PDV 2.2.3 at `/opt/pdv/PDV.jar` for batch spectrum plotting
 - `xvfb-run` for virtual-display execution of PDV CLI inside Docker
-- Shell scripts at `/opt/impact_trial/scripts/`
+- Shell scripts at `/opt/scripts/`
 
 **License-required tools in the main FragPipe image:**
 - **IonQuant**, **MSFragger**, and **diaTracer** (download/license details: [FragPipe wiki](https://github.com/rokitalab/fragpipe/wiki))
@@ -431,15 +431,18 @@ Auto-generate new manifest with full local paths
 - **MSFragger native readers** (`ext/` folder from the licensed MSFragger 4.1 zip, including `ext/bruker/libtimsdata-2-21-0-4.so`): place at `tools/ext/` before building; required for Bruker `.d` input. `tools/ext/` is gitignored.
 
 **For .raw file conversion**, you also need:
-- **MSConvert Docker Image**: `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses`
-  - Contains ProteoWizard msconvert tool
-  - Includes wine for running Windows-based msconvert
+- **MSConvert Docker Image**: `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0`, built from `Dockerfile.pwiz`
+  - Based on `proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses` (ProteoWizard msconvert under wine)
+  - Contains its own copy of `scripts/msconvert-raw.sh` at `/opt/scripts/`, so it needs a new release tag whenever that script changes
   - Used only for the `msconvert-raw.cwl` step
 
 **Building:**
 ```bash
 docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0 .
 docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0
+
+docker build -f Dockerfile.pwiz -t pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0 .
+docker push pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0
 ```
 
 ## Requirements
@@ -447,7 +450,7 @@ docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0
 - **CWL Runner**: cwltool 3.1+ (for CWL v1.2 support including `InplaceUpdateRequirement`)
 - **Docker**: For containerized execution
   - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0`
-  - MSConvert image (for .raw files): `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses` (auto-pulled)
+  - MSConvert image (for .raw files): `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0`
 - **SBFS**: Seven Bridges File System (for local workflow with Cavatica mounts)
   - Requires `/etc/fuse.conf` with `user_allow_other` enabled
   - Requires Cavatica credentials configured

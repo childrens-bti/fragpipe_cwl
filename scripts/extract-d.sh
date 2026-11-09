@@ -77,7 +77,8 @@ extract_archive() {
     *.zip) unzip -q "$archive" -d "$staging" ;;
     *)     tar -xf "$archive" -C "$staging" ;;
   esac
-  rm -rf "$staging/__MACOSX"
+  # Drop macOS archive metadata (__MACOSX/, AppleDouble ._* files, .DS_Store)
+  rm -rf "$staging/__MACOSX" "$staging"/._* "$staging/.DS_Store"
 
   local entries
   entries=$(find "$staging" -mindepth 1 -maxdepth 1 | wc -l)
@@ -109,7 +110,12 @@ done < <(awk -F'\t' '{ sub(/\r$/, "") } $2 != "" { print $2 "\t" ($4 != "" ? $4 
 
 # For each manifest base name, find the first matching .d archive under SOURCE_DIR
 for m in "${!DATA_TYPE[@]}"; do
-  d=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort | head -n 1)
+  matches=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
+  d=$(head -n 1 <<< "$matches")
+  if [[ $(grep -c . <<< "$matches") -gt 1 ]]; then
+    echo "WARNING: Multiple archives found for $m; using $d and ignoring:" >&2
+    tail -n +2 <<< "$matches" | sed 's/^/  /' >&2
+  fi
   if [[ -n "$d" ]]; then
     process_archive "$d" "$m"
   else

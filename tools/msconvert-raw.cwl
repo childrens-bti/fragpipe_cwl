@@ -11,7 +11,7 @@ baseCommand: [bash, /opt/scripts/msconvert-raw.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:latest"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0"
   InitialWorkDirRequirement:
     listing:
       - writable: true
