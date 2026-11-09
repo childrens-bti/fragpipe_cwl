@@ -4,6 +4,8 @@ set -euo pipefail
 
 # Usage: copy-d.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
 # Copy Bruker timsTOF .d directories and generate a FragPipe manifest.
+# A run with no <run>.d directory is extracted from <run>.d.zip, .d.tar,
+# .d.tar.gz or .d.tgz instead; the archive must hold <run>.d/ at its root.
 # MSFragger reads .d natively, so no conversion is done.
 SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
@@ -28,9 +30,11 @@ echo "run_subset is set to '$RUN_SUBSET'"
 echo "subset_pattern is set to '$SUBSET_PATTERN'"
 SOURCE_DIR_ABS="$(readlink -f "$SOURCE_DIR")"
 
-# Process one .d directory: decide experiment, copy into per-experiment folder
+# Process one .d directory or archive: decide experiment, copy or extract
+# into per-experiment folder
 process_dir() {
   local dpath="$1"
+  local run="$2"
 
   # subset filter: only paths containing the subset pattern
   if [[ "$RUN_SUBSET" == "true" && "$dpath" != */$SUBSET_PATTERN/* ]]; then
@@ -57,9 +61,44 @@ process_dir() {
   local out_exp_dir="$OUT_DIR/$exp_name"
   mkdir -p "$out_exp_dir"
 
-  echo "Copying $(basename "$d_abs") -> $out_exp_dir/"
-  rm -rf "${out_exp_dir:?}/$(basename "$d_abs")"
-  cp -r "$d_abs" "$out_exp_dir/"
+  rm -rf "${out_exp_dir:?}/$run.d"
+  if [[ -d "$d_abs" ]]; then
+    echo "Copying $(basename "$d_abs") -> $out_exp_dir/"
+    cp -r "$d_abs" "$out_exp_dir/"
+  else
+    extract_archive "$d_abs" "$run" "$out_exp_dir"
+  fi
+}
+
+# Extract <run>.d.{zip,tar,tar.gz,tgz} and check it holds a single <run>.d/
+extract_archive() {
+  local archive="$1"
+  local run="$2"
+  local out_exp_dir="$3"
+  local staging="$out_exp_dir/.extract_$run"
+
+  echo "Extracting $(basename "$archive") -> $out_exp_dir/"
+  rm -rf "$staging"
+  mkdir -p "$staging"
+  case "$archive" in
+    *.zip) unzip -q "$archive" -d "$staging" ;;
+    *)     tar -xf "$archive" -C "$staging" ;;
+  esac
+  rm -rf "$staging/__MACOSX"
+
+  local entries
+  entries=$(find "$staging" -mindepth 1 -maxdepth 1 | wc -l)
+  if [[ "$entries" -ne 1 || ! -d "$staging/$run.d" ]]; then
+    echo "ERROR: $(basename "$archive") must contain a single top-level $run.d/ directory" >&2
+    find "$staging" -mindepth 1 -maxdepth 1 -printf "  found: %f\n" >&2
+    exit 3
+  fi
+  if [[ ! -f "$staging/$run.d/analysis.tdf" ]]; then
+    echo "ERROR: $run.d from $(basename "$archive") has no analysis.tdf (not a timsTOF .d run)" >&2
+    exit 3
+  fi
+  mv "$staging/$run.d" "$out_exp_dir/"
+  rm -rf "$staging"
 }
 
 
@@ -75,13 +114,17 @@ while IFS=$'\t' read -r base dtype; do
   DATA_TYPE["$base"]="$dtype"
 done < <(awk -F'\t' '{ sub(/\r$/, "") } $2 != "" { print $2 "\t" ($4 != "" ? $4 : "DDA") }' "$MANIFEST_FILE")
 
-# For each manifest base name, find the first matching .d directory under SOURCE_DIR
+# For each manifest base name, find the first matching .d directory under
+# SOURCE_DIR, or else the first matching .d archive
 for m in "${!DATA_TYPE[@]}"; do
   d=$(find "$SOURCE_DIR" -type d -name "$m.d" -prune | head -n 1)
+  if [[ -z "$d" ]]; then
+    d=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort | head -n 1)
+  fi
   if [[ -n "$d" ]]; then
-    process_dir "$d"
+    process_dir "$d" "$m"
   else
-    echo "WARNING: No matching .d directory found for $m under $SOURCE_DIR" >&2
+    echo "WARNING: No matching .d directory or .d archive found for $m under $SOURCE_DIR" >&2
   fi
 done
 
@@ -94,6 +137,6 @@ while IFS= read -r dpath; do
   echo -e "${dpath}\t${basename}\t\t${DATA_TYPE[$basename]:-DDA}"
 done < mzml_files.txt > mzml_manifest.fp-manifest
 
-echo "Copy complete. $(wc -l < mzml_files.txt) .d directories ready."
+echo "Copy/extract complete. $(wc -l < mzml_files.txt) .d directories ready."
 echo "Experiments found:"
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 -type d -printf "  %f\n" | sort

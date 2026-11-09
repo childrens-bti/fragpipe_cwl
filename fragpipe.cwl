@@ -161,7 +161,7 @@ steps:
       manifest_file: manifest_file
     out: [mzml_directory, mzml_file_list, mzml_manifest]
 
-  # Step 1d: Copy Bruker .d directories (if input is timsTOF .d)
+  # Step 1d: Copy Bruker .d directories, or extract .d.zip/.d.tar* archives (if input is timsTOF .d)
   copy_d:
     run: tools/copy-d.cwl
     when: $(inputs.input_type === "d")
