@@ -267,7 +267,7 @@ def main() -> None:
 
             total_runs += 1
             total_scans += len(scans)
-            summary_lines.append(f"{sample_name}\t{len(scans)}")
+            summary_lines.append(f"{run_name}\t{len(scans)}")
 
     summary_lines.append(f"runs_with_plots\t{total_runs}")
     summary_lines.append(f"total_scans_submitted\t{total_scans}")

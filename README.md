@@ -260,7 +260,7 @@ Manifest column 2 is the run name without `.d` or the archive extension (e.g. `r
 
 Notes for `.d` input:
 - The image must include MSFragger's `ext/` folder (see [Docker Image](#docker-image)); without it MSFragger reports `Scans = 0`.
-- `run_pdv` is not supported yet: `fragpipe-pdv.py` looks for `<run>.mzML`, while `.d` runs only produce `<run>_uncalibrated.mzML`.
+- PDV plotting is skipped for `.d` input even with `run_pdv: true` (`fragpipe-pdv.py` looks for `<run>.mzML`, while `.d` runs only produce `<run>_uncalibrated.mzML`).
 - The control filter's mutation-position gating reads `peptMutPos` / `Protein_fusion_site` from query FASTA headers; peptides from custom FASTA entries without these tags (such as minigene constructs) are all kept, whether or not they cover a mutation.
 
 > **Note:** `input_source_dir` holds the input data for every `input_type` (`.raw`, `.mzML.gz`, `.mzML`, or `.d` archives). It was called `mzml_source_dir` before v1.2.0; params files written for older releases need this key renamed.
@@ -399,7 +399,7 @@ Auto-generate new manifest with full local paths
 |---------|-------------|
 | **Input Type Routing** | `input_type` (`raw`, `mzml_gz`, `mzml`, `d`) selects the matching conversion/copy step |
 | **Raw File Support** | Converts Thermo Fisher .raw files using msconvert from ProteoWizard |
-| **Bruker timsTOF Support** | `input_type: "d"` extracts `.d.zip` / `.d.tar` / `.d.tar.gz` / `.d.tgz` archives and searches the `.d` runs natively (no conversion); PDV plotting is not supported for `.d` yet |
+| **Bruker timsTOF Support** | `input_type: "d"` extracts `.d.zip` / `.d.tar` / `.d.tar.gz` / `.d.tgz` archives and searches the `.d` runs natively (no conversion); PDV plotting is skipped for `.d` |
 | **Optional Canonical Filter** | `skip_canonical_filter: true` keeps wild-type proteins in the database (e.g. minigene / immunopeptidomics searches) |
 | **Automatic Manifest Generation** | Builds the FragPipe manifest with local paths from the processed files; the input manifest (column 2 = run names) is still required |
 | **Subset Processing** | With `run_subset: true`, process only files under a folder named `subset_pattern` |

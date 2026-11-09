@@ -78,7 +78,9 @@ inputs:
   run_pdv:
     type: boolean
     default: false
-    doc: If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv
+    doc: |
+      If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv.
+      Ignored for input_type "d" (PDV is skipped for Bruker .d runs).
 
   num_cores:
     type: int
@@ -230,10 +232,12 @@ steps:
       - control_overlap_summary
 
   # Step 6: Optional PDV plotting for control-filtered peptides
+  # (skipped for .d input: those runs have no <run>.mzML for PDV)
   run_pdv_plots:
     run: tools/fragpipe-pdv.cwl
-    when: $(inputs.run_pdv === true && inputs.control_combined_peptide !== null)
+    when: $(inputs.run_pdv === true && inputs.control_combined_peptide !== null && inputs.input_type !== "d")
     in:
+      input_type: input_type
       run_pdv: run_pdv
       control_combined_peptide: control_combined_peptide
       results_dir: run_fragpipe/results_dir
@@ -256,5 +260,5 @@ hints:
   value: "m5.8xlarge"
 
 "sbg:links":
-- id: "https://github.com/childrens-bti/fragpipe_cwl" # update with stable release in Cavatica
+- id: "https://github.com/childrens-bti/fragpipe_cwl/releases/tag/v1.2.0" # update with stable release in Cavatica
   label: github-release
