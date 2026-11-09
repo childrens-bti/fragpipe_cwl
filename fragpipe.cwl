@@ -161,9 +161,9 @@ steps:
       manifest_file: manifest_file
     out: [mzml_directory, mzml_file_list, mzml_manifest]
 
-  # Step 1d: Copy Bruker .d directories, or extract .d.zip/.d.tar* archives (if input is timsTOF .d)
-  copy_d:
-    run: tools/copy-d.cwl
+  # Step 1d: Extract Bruker .d runs from .d.zip/.d.tar* archives (if input is timsTOF .d)
+  extract_d:
+    run: tools/extract-d.cwl
     when: $(inputs.input_type === "d")
     in:
       input_type: input_type
@@ -203,10 +203,10 @@ steps:
       workflow_file: workflow_file
       output_basename: output_basename
       manifest_file:
-        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest, copy_d/mzml_manifest]
+        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest, extract_d/mzml_manifest]
         pickValue: first_non_null
       mzml_directory:
-        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory, copy_d/mzml_directory]
+        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory, extract_d/mzml_directory]
         pickValue: first_non_null
     out:
       - mzml_directory_out

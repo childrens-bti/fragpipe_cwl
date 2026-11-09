@@ -2,11 +2,10 @@
 set -euo pipefail
 
 
-# Usage: copy-d.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
-# Copy Bruker timsTOF .d directories and generate a FragPipe manifest.
-# A run with no <run>.d directory is extracted from <run>.d.zip, .d.tar,
-# .d.tar.gz or .d.tgz instead; the archive must hold <run>.d/ at its root.
-# MSFragger reads .d natively, so no conversion is done.
+# Usage: extract-d.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
+# Extract Bruker timsTOF runs from <run>.d.zip, .d.tar, .d.tar.gz or .d.tgz
+# archives and generate a FragPipe manifest. Each archive must hold <run>.d/
+# at its root. MSFragger reads .d natively, so no conversion is done.
 SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
@@ -30,9 +29,8 @@ echo "run_subset is set to '$RUN_SUBSET'"
 echo "subset_pattern is set to '$SUBSET_PATTERN'"
 SOURCE_DIR_ABS="$(readlink -f "$SOURCE_DIR")"
 
-# Process one .d directory or archive: decide experiment, copy or extract
-# into per-experiment folder
-process_dir() {
+# Process one .d archive: decide experiment, extract into per-experiment folder
+process_archive() {
   local dpath="$1"
   local run="$2"
 
@@ -44,12 +42,12 @@ process_dir() {
   local d_abs
   d_abs="$(readlink -f "$dpath")"
 
-  # The directory containing the .d is the "experiment folder"
+  # The directory containing the archive is the "experiment folder"
   local exp_src_dir
   exp_src_dir="$(dirname "$d_abs")"
 
   # Experiment id is the first directory under SOURCE_DIR, or SOURCE_DIR's own
-  # name when .d folders sit directly under it (same rule as copy-mzml.sh)
+  # name when archives sit directly under it (same rule as copy-mzml.sh)
   local exp_rel
   exp_rel="${exp_src_dir#"$SOURCE_DIR_ABS"/}"
   if [[ "$exp_rel" == "$exp_src_dir" ]]; then
@@ -62,12 +60,7 @@ process_dir() {
   mkdir -p "$out_exp_dir"
 
   rm -rf "${out_exp_dir:?}/$run.d"
-  if [[ -d "$d_abs" ]]; then
-    echo "Copying $(basename "$d_abs") -> $out_exp_dir/"
-    cp -r "$d_abs" "$out_exp_dir/"
-  else
-    extract_archive "$d_abs" "$run" "$out_exp_dir"
-  fi
+  extract_archive "$d_abs" "$run" "$out_exp_dir"
 }
 
 # Extract <run>.d.{zip,tar,tar.gz,tgz} and check it holds a single <run>.d/
@@ -114,21 +107,17 @@ while IFS=$'\t' read -r base dtype; do
   DATA_TYPE["$base"]="$dtype"
 done < <(awk -F'\t' '{ sub(/\r$/, "") } $2 != "" { print $2 "\t" ($4 != "" ? $4 : "DDA") }' "$MANIFEST_FILE")
 
-# For each manifest base name, find the first matching .d directory under
-# SOURCE_DIR, or else the first matching .d archive
+# For each manifest base name, find the first matching .d archive under SOURCE_DIR
 for m in "${!DATA_TYPE[@]}"; do
-  d=$(find "$SOURCE_DIR" -type d -name "$m.d" -prune | head -n 1)
-  if [[ -z "$d" ]]; then
-    d=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort | head -n 1)
-  fi
+  d=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort | head -n 1)
   if [[ -n "$d" ]]; then
-    process_dir "$d" "$m"
+    process_archive "$d" "$m"
   else
-    echo "WARNING: No matching .d directory or .d archive found for $m under $SOURCE_DIR" >&2
+    echo "WARNING: No matching .d.zip/.d.tar/.d.tar.gz/.d.tgz archive found for $m under $SOURCE_DIR" >&2
   fi
 done
 
-# Create mzml_files.txt (all .d paths)
+# Create mzml_files.txt (all extracted .d paths)
 find "$OUT_DIR" -mindepth 2 -maxdepth 2 -type d -name "*.d" | sort > mzml_files.txt
 
 # mzml_manifest.fp-manifest: FragPipe format (path, basename without .d, empty, data type)
@@ -137,6 +126,6 @@ while IFS= read -r dpath; do
   echo -e "${dpath}\t${basename}\t\t${DATA_TYPE[$basename]:-DDA}"
 done < mzml_files.txt > mzml_manifest.fp-manifest
 
-echo "Copy/extract complete. $(wc -l < mzml_files.txt) .d directories ready."
+echo "Extraction complete. $(wc -l < mzml_files.txt) .d directories ready."
 echo "Experiments found:"
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 -type d -printf "  %f\n" | sort

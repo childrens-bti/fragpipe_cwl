@@ -15,7 +15,7 @@ fragpipe_cwl/
 │   ├── filter-control-peptides.cwl   # Optional control-overlap peptide filtering
 │   ├── gunzip-mzml.cwl               # Decompress mzML files and generate manifest
 │   ├── copy-mzml.cwl                 # Copy uncompressed mzML files
-│   ├── copy-d.cwl                    # Copy or extract Bruker timsTOF .d directories
+│   ├── extract-d.cwl                 # Extract Bruker timsTOF .d runs from archives
 │   ├── fragpipe-headless.cwl         # Main FragPipe execution
 │   └── fragpipe-pdv.cwl              # Optional PDV batch plotting
 ├── scripts/                          # Shell scripts called by CWL tools
@@ -25,7 +25,7 @@ fragpipe_cwl/
 │   ├── filter-control-peptides.py    # Control-overlap peptide filtering logic
 │   ├── gunzip-mzml.sh                # mzML decompression with TMT annotation support
 │   ├── copy-mzml.sh                  # Copy mzML files with manifest generation
-│   ├── copy-d.sh                     # Copy or extract .d directories with manifest generation
+│   ├── extract-d.sh                  # Extract .d archives with manifest generation
 │   ├── fragpipe-headless.sh          # FragPipe headless execution
 │   ├── fragpipe-pdv.py               # PDV plotting from filtered peptides
 │   └── sbfs-mount.sh                 # SBFS mount utility (standalone)
@@ -50,7 +50,7 @@ FragPipe supports a comprehensive set of workflow configurations available in th
    - **Convert .raw to .mzML**: Use msconvert if input is .raw files
    - **Decompress .mzML.gz**: Gunzip if input is compressed mzML files
    - **Copy .mzML**: Direct copy if input is already uncompressed mzML
-   - **Copy .d**: Direct copy of Bruker timsTOF .d directories, or extraction of `.d.zip` / `.d.tar` / `.d.tar.gz` / `.d.tgz` archives (read natively by MSFragger, no conversion)
+   - **Extract .d**: Extract Bruker timsTOF runs from `.d.zip` / `.d.tar` / `.d.tar.gz` / `.d.tgz` archives (read natively by MSFragger, no conversion)
 2. **Prepare database**: Add decoys and contaminants to custom FASTA using Philosopher
 3. **Filter canonical peptides**: Remove canonical peptides by gene symbols (skip with `skip_canonical_filter: true` to keep wild-type sequences in the database)
 4. **Run FragPipe**: Execute FragPipe in headless mode with prepared database
@@ -109,16 +109,14 @@ source_dir/
 │   └── sample_004.raw
 ```
 
-**For Bruker timsTOF .d directories or archives** (flat or in experiment subfolders):
+**For Bruker timsTOF runs** (one archive per run, flat or in experiment subfolders):
 ```
 source_dir/
-├── run_001.d/
-│   ├── analysis.tdf
-│   └── analysis.tdf_bin
-├── run_002.d/
-└── run_003.d.zip                 # or .d.tar / .d.tar.gz / .d.tgz
+├── run_001.d.zip
+├── run_002.d.tar.gz
+└── run_003.d.tgz                 # .d.zip, .d.tar, .d.tar.gz or .d.tgz
 ```
-A `<run>.d/` folder is used when present; otherwise `<run>.d.zip`, `.d.tar`, `.d.tar.gz` or `.d.tgz` is extracted. Each archive must contain a single top-level `<run>.d/` folder with `analysis.tdf`, or the step fails.
+Each archive must contain a single top-level `<run>.d/` folder with `analysis.tdf` (and `analysis.tdf_bin`), or the step fails. Uncompressed `.d` folders are not accepted; archive them first (e.g. `zip -0 -r run_001.d.zip run_001.d`). This matches the archived-run naming in the proteomics and immunopeptidomics manifests ([manifest-template](https://github.com/childrens-bti/manifest-template)).
 
 #### Step 2: Create a Manifest File
 
@@ -241,12 +239,12 @@ input_type: "mzml_gz"  # Change only this parameter
 # ... rest same as .mzML example
 ```
 
-**For Bruker timsTOF .d directories:**
+**For Bruker timsTOF .d archives:**
 ```yaml
 input_type: "d"
 mzml_source_dir:
   class: Directory
-  path: /path/to/source_dir       # Directory with <run>.d folders or <run>.d.zip/.d.tar* archives (flat or per-experiment subfolders)
+  path: /path/to/source_dir       # Directory with <run>.d.zip/.d.tar/.d.tar.gz/.d.tgz archives (flat or per-experiment subfolders)
 
 # HLA class I immunopeptidomics: nonspecific search, peptide length 8-15
 # (FragPipe 22.0 Nonspecific-HLA template with digest length changed from 7-25)
@@ -258,14 +256,14 @@ workflow_file:
 skip_canonical_filter: true
 # ... rest same as .mzML example
 ```
-Manifest column 2 is the run name without `.d`; column 4 (`DDA` or `DIA`) is kept and defaults to `DDA`.
+Manifest column 2 is the run name without `.d` or the archive extension (e.g. `run_001` for `run_001.d.zip`); column 4 (`DDA` or `DIA`) is kept and defaults to `DDA`.
 
 Notes for `.d` input:
 - The image must include MSFragger's `ext/` folder (see [Docker Image](#docker-image)); without it MSFragger reports `Scans = 0`.
 - `run_pdv` is not supported yet: `fragpipe-pdv.py` looks for `<run>.mzML`, while `.d` runs only produce `<run>_uncalibrated.mzML`.
 - The control filter's mutation-position gating reads `peptMutPos` / `Protein_fusion_site` from query FASTA headers; peptides from custom FASTA entries without these tags (such as minigene constructs) are all kept, whether or not they cover a mutation.
 
-> **Note:** `mzml_source_dir` holds the input data for every `input_type` (`.raw`, `.mzML.gz`, `.mzML`, or `.d`), not only mzML. The name predates `.raw` and `.d` support and is kept so existing params files and Cavatica tasks keep working. A rename (e.g. `input_source_dir`) is planned as a separate change.
+> **Note:** `mzml_source_dir` holds the input data for every `input_type` (`.raw`, `.mzML.gz`, `.mzML`, or `.d` archives), not only mzML. The name predates `.raw` and `.d` support and is kept so existing params files and Cavatica tasks keep working. A rename (e.g. `input_source_dir`) is planned as a separate change.
 
 #### Step 4: Run Workflow
 
@@ -401,7 +399,7 @@ Auto-generate new manifest with full local paths
 |---------|-------------|
 | **Input Type Routing** | `input_type` (`raw`, `mzml_gz`, `mzml`, `d`) selects the matching conversion/copy step |
 | **Raw File Support** | Converts Thermo Fisher .raw files using msconvert from ProteoWizard |
-| **Bruker timsTOF Support** | `input_type: "d"` copies `.d` directories (or extracts `.d.zip` / `.d.tar*` archives) and searches them natively (no conversion); PDV plotting is not supported for `.d` yet |
+| **Bruker timsTOF Support** | `input_type: "d"` extracts `.d.zip` / `.d.tar` / `.d.tar.gz` / `.d.tgz` archives and searches the `.d` runs natively (no conversion); PDV plotting is not supported for `.d` yet |
 | **Optional Canonical Filter** | `skip_canonical_filter: true` keeps wild-type proteins in the database (e.g. minigene / immunopeptidomics searches) |
 | **Automatic Manifest Generation** | Builds the FragPipe manifest with local paths from the processed files; the input manifest (column 2 = run names) is still required |
 | **Subset Processing** | With `run_subset: true`, process only files under a folder named `subset_pattern` |

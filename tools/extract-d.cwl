@@ -1,18 +1,17 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-label: Copy or Extract Bruker .d Directories
+label: Extract Bruker .d Archives
 doc: |
-  Copy Bruker timsTOF .d directories from a source directory to a local output directory.
-  MSFragger reads .d natively, so no conversion is done. The copy is still needed because
-  MSFragger writes <run>.mzBIN and <run>_uncalibrated.mzML next to each .d, which fails on
-  read-only sources such as S3 mounts. A run with no <run>.d directory is extracted from
-  <run>.d.zip, .d.tar, .d.tar.gz or .d.tgz instead; the archive must contain a single
-  top-level <run>.d/ with analysis.tdf. Also generates FragPipe manifest, keeping the data
+  Extract Bruker timsTOF runs from <run>.d.zip, .d.tar, .d.tar.gz or .d.tgz archives in a
+  source directory into a local output directory. Each archive must contain a single
+  top-level <run>.d/ with analysis.tdf. MSFragger reads .d natively, so no conversion is
+  done; extracting to a local directory also lets MSFragger write <run>.mzBIN and
+  <run>_uncalibrated.mzML next to each .d. Also generates FragPipe manifest, keeping the data
   type (4th column) from the input manifest and defaulting to DDA.
   Requires the Bruker reader (ext/bruker/libtimsdata-2-21-0-4.so) in the image.
 
-baseCommand: [bash, /opt/scripts/copy-d.sh]
+baseCommand: [bash, /opt/scripts/extract-d.sh]
 
 requirements:
   InlineJavascriptRequirement: {}
@@ -31,7 +30,7 @@ inputs:
 
   mzml_source_dir:
     type: Directory
-    doc: Directory containing Bruker .d directories or .d.zip/.d.tar/.d.tar.gz/.d.tgz archives
+    doc: Directory containing Bruker .d.zip/.d.tar/.d.tar.gz/.d.tgz archives
     inputBinding:
       position: 1
 
@@ -58,7 +57,7 @@ outputs:
     type: Directory
     outputBinding:
       glob: "mzml_files"
-    doc: Directory containing copied .d directories
+    doc: Directory containing extracted .d directories
 
   mzml_file_list:
     type: File
