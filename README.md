@@ -413,7 +413,9 @@ Auto-generate new manifest with full local paths
 
 ## Docker Image
 
-**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22` (the tag referenced by every FragPipe tool in `tools/*.cwl`)
+**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0` (the tag referenced by every FragPipe tool in `tools/*.cwl`)
+
+**Image tags follow releases:** each fragpipe_cwl release pins its own image tag, named after the release (e.g. `v1.2.0`), because `scripts/` is built into the image. A release's tag is never overwritten. When `scripts/` or the `Dockerfile` changes, build and push a new tag and update `dockerPull` in `tools/*.cwl` to match. Releases before v1.2.0 use `fragpipe_v22`, which is kept at the pre-v1.2.0 image.
 
 **Contents:**
 - FragPipe 22.0 at `/fragpipe_bin/fragPipe-22.0/fragpipe/`
@@ -436,15 +438,15 @@ Auto-generate new manifest with full local paths
 
 **Building:**
 ```bash
-docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22 .
-docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22
+docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0 .
+docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0
 ```
 
 ## Requirements
 
 - **CWL Runner**: cwltool 3.1+ (for CWL v1.2 support including `InplaceUpdateRequirement`)
 - **Docker**: For containerized execution
-  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22`
+  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0`
   - MSConvert image (for .raw files): `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses` (auto-pulled)
 - **SBFS**: Seven Bridges File System (for local workflow with Cavatica mounts)
   - Requires `/etc/fuse.conf` with `user_allow_other` enabled
