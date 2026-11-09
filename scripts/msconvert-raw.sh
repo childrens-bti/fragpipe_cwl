@@ -15,7 +15,7 @@ RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
 NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
-OUT_DIR="$(pwd)/mzml_files"
+OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -25,8 +25,8 @@ mkdir -p "$OUT_DIR"
 
 if [ ! -d "$SOURCE_DIR" ]; then
   echo "ERROR: Source directory not found: $SOURCE_DIR" >&2
-  : > mzml_files.txt
-  : > mzml_manifest.fp-manifest
+  : > input_files.txt
+  : > input_manifest.fp-manifest
   exit 1
 fi
 
@@ -154,15 +154,15 @@ else
 fi
 
 # Generate file list
-find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > mzml_files.txt
+find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > input_files.txt
 
 # Generate FragPipe manifest
-> mzml_manifest.fp-manifest
+> input_manifest.fp-manifest
 while IFS= read -r mzml_file; do
   basename_no_ext=$(basename "$mzml_file" .mzML)
   basename_no_ext=$(basename "$basename_no_ext" .mzml)
-  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> mzml_manifest.fp-manifest
-done < mzml_files.txt
+  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> input_manifest.fp-manifest
+done < input_files.txt
 
-NUM_FILES=$(wc -l < mzml_files.txt)
+NUM_FILES=$(wc -l < input_files.txt)
 echo "=== Converted $NUM_FILES files ==="

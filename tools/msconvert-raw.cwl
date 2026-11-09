@@ -15,8 +15,8 @@ requirements:
   InitialWorkDirRequirement:
     listing:
       - writable: true
-        entry: mzml_files
-        entryname: mzml_files
+        entry: input_files
+        entryname: input_files
 
 inputs:
   input_type:
@@ -60,20 +60,20 @@ hints:
     ramMin: 131072
 
 outputs:
-  mzml_directory:
+  input_directory:
     type: Directory
     outputBinding:
-      glob: "mzml_files"
+      glob: "input_files"
     doc: Directory containing converted mzML files
 
-  mzml_file_list:
+  input_file_list:
     type: File
     outputBinding:
-      glob: "mzml_files.txt"
+      glob: "input_files.txt"
     doc: Text file listing all converted mzML file paths
 
-  mzml_manifest:
+  input_manifest:
     type: File
     outputBinding:
-      glob: "mzml_manifest.fp-manifest"
+      glob: "input_manifest.fp-manifest"
     doc: FragPipe manifest file for converted mzML files

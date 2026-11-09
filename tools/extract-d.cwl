@@ -20,15 +20,15 @@ requirements:
   InitialWorkDirRequirement:
     listing:
       - writable: true
-        entry: mzml_files
-        entryname: mzml_files
+        entry: input_files
+        entryname: input_files
 
 inputs:
   input_type:
     type: string?
     doc: Optional - input type from the workflow (not passed to script)
 
-  mzml_source_dir:
+  input_source_dir:
     type: Directory
     doc: Directory containing Bruker .d.zip/.d.tar/.d.tar.gz/.d.tgz archives
     inputBinding:
@@ -53,20 +53,20 @@ inputs:
       position: 4
 
 outputs:
-  mzml_directory:
+  input_directory:
     type: Directory
     outputBinding:
-      glob: "mzml_files"
+      glob: "input_files"
     doc: Directory containing extracted .d directories
 
-  mzml_file_list:
+  input_file_list:
     type: File
     outputBinding:
-      glob: "mzml_files.txt"
+      glob: "input_files.txt"
     doc: Text file listing all .d directory paths
 
-  mzml_manifest:
+  input_manifest:
     type: File
     outputBinding:
-      glob: "mzml_manifest.fp-manifest"
+      glob: "input_manifest.fp-manifest"
     doc: FragPipe manifest file for .d directories

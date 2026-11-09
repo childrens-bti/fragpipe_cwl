@@ -18,8 +18,8 @@ requirements:
       - entry: $(inputs.results_dir)
         entryname: $(inputs.results_dir.basename)
         writable: true
-      - entry: $(inputs.mzml_directory)
-        entryname: $(inputs.mzml_directory.basename)
+      - entry: $(inputs.input_directory)
+        entryname: $(inputs.input_directory.basename)
       - $(inputs.target_peptide_table)
 
 inputs:
@@ -37,7 +37,7 @@ inputs:
     inputBinding:
       position: 1
 
-  mzml_directory:
+  input_directory:
     type: Directory
     doc: Directory containing mzML files used by FragPipe
     inputBinding:

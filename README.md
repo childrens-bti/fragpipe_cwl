@@ -183,7 +183,7 @@ manifest_file:
   class: File
   path: $(pwd)/manifest.fp-manifest
 
-mzml_source_dir:
+input_source_dir:
   class: Directory
   path: /path/to/source_dir
 
@@ -221,7 +221,7 @@ manifest_file:
   class: File
   path: $(pwd)/manifest.fp-manifest
 
-mzml_source_dir:
+input_source_dir:
   class: Directory
   path: /path/to/source_dir       # Directory with .raw files
 
@@ -242,7 +242,7 @@ input_type: "mzml_gz"  # Change only this parameter
 **For Bruker timsTOF .d archives:**
 ```yaml
 input_type: "d"
-mzml_source_dir:
+input_source_dir:
   class: Directory
   path: /path/to/source_dir       # Directory with <run>.d.zip/.d.tar/.d.tar.gz/.d.tgz archives (flat or per-experiment subfolders)
 
@@ -263,7 +263,7 @@ Notes for `.d` input:
 - `run_pdv` is not supported yet: `fragpipe-pdv.py` looks for `<run>.mzML`, while `.d` runs only produce `<run>_uncalibrated.mzML`.
 - The control filter's mutation-position gating reads `peptMutPos` / `Protein_fusion_site` from query FASTA headers; peptides from custom FASTA entries without these tags (such as minigene constructs) are all kept, whether or not they cover a mutation.
 
-> **Note:** `mzml_source_dir` holds the input data for every `input_type` (`.raw`, `.mzML.gz`, `.mzML`, or `.d` archives), not only mzML. The name predates `.raw` and `.d` support and is kept so existing params files and Cavatica tasks keep working. A rename (e.g. `input_source_dir`) is planned as a separate change.
+> **Note:** `input_source_dir` holds the input data for every `input_type` (`.raw`, `.mzML.gz`, `.mzML`, or `.d` archives). It was called `mzml_source_dir` before v1.2.0; params files written for older releases need this key renamed.
 
 #### Step 4: Run Workflow
 

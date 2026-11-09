@@ -7,7 +7,7 @@ SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
-OUT_DIR="$(pwd)/mzml_files"
+OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -16,9 +16,9 @@ fi
 mkdir -p "$OUT_DIR"
 
 if [ ! -d "$SOURCE_DIR" ]; then
-  echo "ERROR: mzml_source_dir does not exist: $SOURCE_DIR" >&2
-  : > mzml_files.txt
-  : > mzml_manifest.fp-manifest
+  echo "ERROR: input_source_dir does not exist: $SOURCE_DIR" >&2
+  : > input_files.txt
+  : > input_manifest.fp-manifest
   exit 1
 fi
 
@@ -107,15 +107,15 @@ for m in "${MANIFEST_BASENAMES[@]}"; do
   fi
 done
 
-# Create mzml_files.txt (all mzML paths)
-find "$OUT_DIR" -type f -name "*.mzML" | sort > mzml_files.txt
+# Create input_files.txt (all mzML paths)
+find "$OUT_DIR" -type f -name "*.mzML" | sort > input_files.txt
 
-# mzml_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
+# input_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
 while IFS= read -r filepath; do
   basename=$(basename "$filepath" .mzML)
   echo -e "${filepath}\t${basename}\t\tDDA"
-done < mzml_files.txt > mzml_manifest.fp-manifest
+done < input_files.txt > input_manifest.fp-manifest
 
-echo "Decompression complete. $(wc -l < mzml_files.txt) mzML files ready."
+echo "Decompression complete. $(wc -l < input_files.txt) mzML files ready."
 echo "Experiments found:"
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 -type d -printf "  %f\n" | sort

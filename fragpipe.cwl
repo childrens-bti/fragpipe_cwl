@@ -33,13 +33,12 @@ inputs:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
   
-  # mzML/raw source (mounted Cavatica or S3 directory)
-  mzml_source_dir:
+  # Input data source (mounted Cavatica or S3 directory)
+  input_source_dir:
     type: Directory
     doc: |
-      Directory containing input files (.raw, .mzML.gz, .mzML, or Bruker .d directories).
-      Note: the name predates .raw and .d support and is kept for compatibility with
-      existing params files and Cavatica tasks; a rename (e.g. input_source_dir) is planned.
+      Directory containing input files: .raw, .mzML.gz, .mzML, or Bruker
+      .d.zip/.d.tar/.d.tar.gz/.d.tgz archives (renamed from mzml_source_dir in v1.2.0).
 
   input_type:
     type: string
@@ -124,14 +123,14 @@ steps:
     when: $(inputs.input_type === "raw")
     in:
       input_type: input_type
-      raw_source_dir: mzml_source_dir
+      raw_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
       num_cores: num_cores
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    out: [input_directory, input_file_list, input_manifest]
 
   # Step 1b: Gunzip mzML files (if input is .mzML.gz)
   gunzip_mzml:
@@ -139,13 +138,13 @@ steps:
     when: $(inputs.input_type === "mzml_gz")
     in:
       input_type: input_type
-      mzml_source_dir: mzml_source_dir
+      input_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    out: [input_directory, input_file_list, input_manifest]
 
   # Step 1c: Copy mzML files (if input is already .mzML)
   copy_mzml:
@@ -153,13 +152,13 @@ steps:
     when: $(inputs.input_type === "mzml")
     in:
       input_type: input_type
-      mzml_source_dir: mzml_source_dir
+      input_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    out: [input_directory, input_file_list, input_manifest]
 
   # Step 1d: Extract Bruker .d runs from .d.zip/.d.tar* archives (if input is timsTOF .d)
   extract_d:
@@ -167,13 +166,13 @@ steps:
     when: $(inputs.input_type === "d")
     in:
       input_type: input_type
-      mzml_source_dir: mzml_source_dir
+      input_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    out: [input_directory, input_file_list, input_manifest]
 
   # Step 2: Add decoys and contaminants to FASTA
   prepare_database:
@@ -203,13 +202,13 @@ steps:
       workflow_file: workflow_file
       output_basename: output_basename
       manifest_file:
-        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest, extract_d/mzml_manifest]
+        source: [convert_raw/input_manifest, gunzip_mzml/input_manifest, copy_mzml/input_manifest, extract_d/input_manifest]
         pickValue: first_non_null
-      mzml_directory:
-        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory, extract_d/mzml_directory]
+      input_directory:
+        source: [convert_raw/input_directory, gunzip_mzml/input_directory, copy_mzml/input_directory, extract_d/input_directory]
         pickValue: first_non_null
     out:
-      - mzml_directory_out
+      - input_directory_out
       - results_dir
       - combined_protein
       - combined_peptide
@@ -238,7 +237,7 @@ steps:
       run_pdv: run_pdv
       control_combined_peptide: control_combined_peptide
       results_dir: run_fragpipe/results_dir
-      mzml_directory: run_fragpipe/mzml_directory_out
+      input_directory: run_fragpipe/input_directory_out
       target_peptide_table: filter_control_peptides/filtered_combined_peptide
       output_basename: output_basename
     out:

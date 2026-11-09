@@ -10,7 +10,7 @@ SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
-OUT_DIR="$(pwd)/mzml_files"
+OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -19,9 +19,9 @@ fi
 mkdir -p "$OUT_DIR"
 
 if [ ! -d "$SOURCE_DIR" ]; then
-  echo "ERROR: mzml_source_dir does not exist: $SOURCE_DIR" >&2
-  : > mzml_files.txt
-  : > mzml_manifest.fp-manifest
+  echo "ERROR: input_source_dir does not exist: $SOURCE_DIR" >&2
+  : > input_files.txt
+  : > input_manifest.fp-manifest
   exit 1
 fi
 
@@ -117,15 +117,15 @@ for m in "${!DATA_TYPE[@]}"; do
   fi
 done
 
-# Create mzml_files.txt (all extracted .d paths)
-find "$OUT_DIR" -mindepth 2 -maxdepth 2 -type d -name "*.d" | sort > mzml_files.txt
+# Create input_files.txt (all extracted .d paths)
+find "$OUT_DIR" -mindepth 2 -maxdepth 2 -type d -name "*.d" | sort > input_files.txt
 
-# mzml_manifest.fp-manifest: FragPipe format (path, basename without .d, empty, data type)
+# input_manifest.fp-manifest: FragPipe format (path, basename without .d, empty, data type)
 while IFS= read -r dpath; do
   basename=$(basename "$dpath" .d)
   echo -e "${dpath}\t${basename}\t\t${DATA_TYPE[$basename]:-DDA}"
-done < mzml_files.txt > mzml_manifest.fp-manifest
+done < input_files.txt > input_manifest.fp-manifest
 
-echo "Extraction complete. $(wc -l < mzml_files.txt) .d directories ready."
+echo "Extraction complete. $(wc -l < input_files.txt) .d directories ready."
 echo "Experiments found:"
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 -type d -printf "  %f\n" | sort

@@ -27,9 +27,9 @@ requirements:
       - $(inputs.filtered_fasta)
       - $(inputs.workflow_file)
       - $(inputs.manifest_file)
-      - entryname: $(inputs.mzml_directory.basename)
+      - entryname: $(inputs.input_directory.basename)
         writable: true
-        entry: $(inputs.mzml_directory)
+        entry: $(inputs.input_directory)
 
 inputs:
   filtered_fasta:
@@ -56,18 +56,18 @@ inputs:
     inputBinding:
       position: 4
 
-  mzml_directory:
+  input_directory:
     type: Directory
     doc: |
       Staged spectra directory from the copy/conversion step: mzML files, or Bruker .d
-      directories for input_type "d" (the name predates .d support; see mzml_source_dir)
+      directories for input_type "d"
 
 outputs:
-  mzml_directory_out:
+  input_directory_out:
     type: Directory
     outputBinding:
-      glob: "$(inputs.mzml_directory.basename)"
-    doc: Updated staged mzML directory after FragPipe execution
+      glob: "$(inputs.input_directory.basename)"
+    doc: Updated staged spectra directory after FragPipe execution
 
   results_dir:
     type: Directory
