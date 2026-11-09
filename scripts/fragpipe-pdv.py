@@ -19,6 +19,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("target_peptide_table", help="*_combined_peptide_control_filtered.tsv file")
     parser.add_argument("output_basename", help="Output basename")
     parser.add_argument(
+        "--pdv-timeout",
+        type=int,
+        default=3600,
+        help="Seconds to wait for PDV per run (default: 3600); PDV can hang after an error",
+    )
+    parser.add_argument(
         "--pdv-jar",
         default="/opt/pdv/PDV.jar",
         help="Path to PDV jar (default: /opt/pdv/PDV.jar)",
@@ -49,7 +55,11 @@ def find_results_samples(results_dir: Path) -> list[Path]:
     return sorted(candidates)
 
 
-def select_pepxml(sample_dir: Path) -> Path | None:
+def select_pepxml(sample_dir: Path, run_name: str) -> Path | None:
+    # Prefer the run's own PeptideProphet output, then any pepXML in the folder
+    own = sample_dir / f"interact-{run_name}.pep.xml"
+    if own.is_file():
+        return own
     interact = sorted(sample_dir.glob("interact-*.pep.xml"))
     if interact:
         return interact[0]
@@ -68,19 +78,29 @@ def index_mzml_files(mzml_directory: Path) -> dict[str, Path]:
     return index
 
 
+def extract_run_name(spectrum_value: str) -> str | None:
+    # Spectrum is <run>.<scan>.<scan>.<charge>; the results folder name can differ
+    # from <run> because FragPipe replaces "-" with "_" in experiment names.
+    match = re.match(r"^(.+)\.\d+\.\d+\.[^.\s]+$", (spectrum_value or "").strip())
+    return match.group(1) if match else None
+
+
 def extract_scan_number(spectrum_value: str) -> str | None:
+    # psm.tsv zero-pads scans (e.g. 03614), but PDV matches the -i list exactly
+    # against the number after "scan=" in the pepXML (3614), so drop the zeros
     value = (spectrum_value or "").strip()
     match = re.search(r"\.(\d+)\.(\d+)\.[^.\s]+$", value)
     if match:
-        return match.group(1)
+        return str(int(match.group(1)))
     match = re.search(r"\.(\d+)\.(\d+)\.", value)
     if match:
-        return match.group(1)
+        return str(int(match.group(1)))
     return None
 
 
-def collect_scan_numbers(psm_file: Path, target_peptides: set[str]) -> list[str]:
-    scans: list[str] = []
+def collect_scan_numbers(psm_file: Path, target_peptides: set[str]) -> dict[str, list[str]]:
+    """Return target scan numbers grouped by run name, in first-seen order."""
+    scans_by_run: dict[str, list[str]] = defaultdict(list)
     with psm_file.open("r", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
         fieldnames = reader.fieldnames or []
@@ -97,18 +117,14 @@ def collect_scan_numbers(psm_file: Path, target_peptides: set[str]) -> list[str]
             peptide = (row.get(peptide_col) or "").strip()
             if peptide not in target_peptides:
                 continue
-            scan = extract_scan_number(row.get(spectrum_col) or "")
-            if scan is not None:
-                scans.append(scan)
+            spectrum = row.get(spectrum_col) or ""
+            run_name = extract_run_name(spectrum)
+            scan = extract_scan_number(spectrum)
+            if run_name is not None and scan is not None:
+                scans_by_run[run_name].append(scan)
 
     # Keep unique scan numbers while preserving first-seen order.
-    seen: set[str] = set()
-    unique_scans: list[str] = []
-    for scan in scans:
-        if scan not in seen:
-            seen.add(scan)
-            unique_scans.append(scan)
-    return unique_scans
+    return {run: list(dict.fromkeys(scans)) for run, scans in scans_by_run.items()}
 
 
 def run_pdv(
@@ -117,6 +133,7 @@ def run_pdv(
     mzml_file: Path,
     scan_file: Path,
     outdir: Path,
+    timeout: int,
 ) -> None:
     cmd = [
         "xvfb-run",
@@ -153,7 +170,15 @@ def run_pdv(
         "-ft",
         "pdf",
     ]
-    subprocess.run(cmd, check=True, cwd=pdv_jar.parent)
+    # PDV's JVM does not exit after an uncaught error (an AWT thread stays
+    # alive), so a timeout turns a hang into a failure
+    try:
+        subprocess.run(cmd, check=True, cwd=pdv_jar.parent, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f"PDV did not finish within {timeout}s for {pepxml_file.name}; "
+            "check the PDV output above for a Java exception"
+        )
 
 
 def main() -> None:
@@ -204,37 +229,45 @@ def main() -> None:
         sample_dir = psm_file.parent
         sample_name = sample_dir.name
 
-        pepxml_file = select_pepxml(sample_dir)
-        if pepxml_file is None:
-            missing["missing_pepxml"].append(sample_name)
-            continue
+        # Match pepXML/mzML by the run name in psm.tsv, not the folder name (#23)
+        scans_by_run = collect_scan_numbers(psm_file, target_peptides)
+        for run_name, scans in scans_by_run.items():
+            if run_name != sample_name:
+                print(f"Results folder {sample_name} holds run {run_name}; "
+                      "matching pepXML/mzML by run name")
 
-        mzml_file = mzml_index.get(sample_name)
-        if mzml_file is None:
-            missing["missing_mzml"].append(sample_name)
-            continue
+            pepxml_file = select_pepxml(sample_dir, run_name)
+            if pepxml_file is None:
+                missing["missing_pepxml"].append(run_name)
+                continue
 
-        scans = collect_scan_numbers(psm_file, target_peptides)
-        if not scans:
-            continue
+            mzml_file = mzml_index.get(run_name)
+            if mzml_file is None:
+                missing["missing_mzml"].append(run_name)
+                print(f"WARNING: no mzML found for run {run_name} under {mzml_directory}")
+                continue
 
-        sample_outdir = base_output / sample_name
-        sample_outdir.mkdir(parents=True, exist_ok=True)
+            # One run per results folder keeps the original layout
+            sample_outdir = base_output / sample_name
+            if len(scans_by_run) > 1:
+                sample_outdir = sample_outdir / run_name
+            sample_outdir.mkdir(parents=True, exist_ok=True)
 
-        scan_file = sample_outdir / "spectrum_scan_number.txt"
-        scan_file.write_text("\n".join(scans) + "\n", encoding="utf-8")
+            scan_file = sample_outdir / "spectrum_scan_number.txt"
+            scan_file.write_text("\n".join(scans) + "\n", encoding="utf-8")
 
-        run_pdv(
-            pdv_jar=pdv_jar,
-            pepxml_file=pepxml_file.resolve(),
-            mzml_file=mzml_file.resolve(),
-            scan_file=scan_file.resolve(),
-            outdir=sample_outdir.resolve(),
-        )
+            run_pdv(
+                pdv_jar=pdv_jar,
+                pepxml_file=pepxml_file.resolve(),
+                mzml_file=mzml_file.resolve(),
+                scan_file=scan_file.resolve(),
+                outdir=sample_outdir.resolve(),
+                timeout=args.pdv_timeout,
+            )
 
-        total_runs += 1
-        total_scans += len(scans)
-        summary_lines.append(f"{sample_name}\t{len(scans)}")
+            total_runs += 1
+            total_scans += len(scans)
+            summary_lines.append(f"{sample_name}\t{len(scans)}")
 
     summary_lines.append(f"runs_with_plots\t{total_runs}")
     summary_lines.append(f"total_scans_submitted\t{total_scans}")
