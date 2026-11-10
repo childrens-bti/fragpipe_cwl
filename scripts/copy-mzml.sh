@@ -8,7 +8,7 @@ SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
-OUT_DIR="$(pwd)/mzml_files"
+OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -17,9 +17,9 @@ fi
 mkdir -p "$OUT_DIR"
 
 if [ ! -d "$SOURCE_DIR" ]; then
-  echo "ERROR: mzml_source_dir does not exist: $SOURCE_DIR" >&2
-  : > mzml_files.txt
-  : > mzml_manifest.fp-manifest
+  echo "ERROR: input_source_dir does not exist: $SOURCE_DIR" >&2
+  : > input_files.txt
+  : > input_manifest.fp-manifest
   exit 1
 fi
 
@@ -95,28 +95,45 @@ if [[ -z "$MANIFEST_FILE" || ! -f "$MANIFEST_FILE" ]]; then
 fi
 echo "Using manifest file: $MANIFEST_FILE"
 # Read base names from 2nd column (tab-separated)
-mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{print $2}' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
+mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{ sub(/\r$/, ""); print $2 }' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
+if [[ ${#MANIFEST_BASENAMES[@]} -eq 0 ]]; then
+  echo "ERROR: No run names in column 2 of $MANIFEST_FILE (expected tab-separated: path, run name, [experiment], [data type])" >&2
+  exit 2
+fi
 # Process files found either directly under SOURCE_DIR or in experiment subfolders
 # For each manifest base name, find the first matching file anywhere under SOURCE_DIR
+missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
   # Find the first match under SOURCE_DIR (top-level or nested)
   f=$(find "$SOURCE_DIR" -type f -name "$m.mzML" | head -n 1)
   if [[ -n "$f" ]]; then
     process_file "$f"
   else
-    echo "WARNING: No matching mzML found for $m under $SOURCE_DIR" >&2
+    missing+=("$m")
   fi
 done
 
-# Create mzml_files.txt (all mzML paths)
-find "$OUT_DIR" -type f -name "*.mzML" | sort > mzml_files.txt
+# A missing run would silently drop that sample from the search, so fail instead
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "ERROR: No matching mzML under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
+  printf '  %s\n' "${missing[@]}" >&2
+  exit 4
+fi
 
-# mzml_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
+# Create input_files.txt (all mzML paths)
+find "$OUT_DIR" -type f -name "*.mzML" | sort > input_files.txt
+
+# input_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
 while IFS= read -r filepath; do
   basename=$(basename "$filepath" .mzML)
   echo -e "${filepath}\t${basename}\t\tDDA"
-done < mzml_files.txt > mzml_manifest.fp-manifest
+done < input_files.txt > input_manifest.fp-manifest
 
-echo "Copy complete. $(wc -l < mzml_files.txt) mzML files ready."
+if [[ ! -s input_files.txt ]]; then
+  echo "ERROR: No mzML files staged (check run_subset/subset_pattern)" >&2
+  exit 4
+fi
+
+echo "Copy complete. $(wc -l < input_files.txt) mzML files ready."
 echo "Experiments found:"
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 -type d -printf "  %f\n" | sort

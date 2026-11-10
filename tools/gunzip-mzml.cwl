@@ -12,24 +12,24 @@ baseCommand: [bash, /opt/scripts/gunzip-mzml.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
   InitialWorkDirRequirement:
     listing:
       - writable: true
-        entry: mzml_files
-        entryname: mzml_files
+        entry: input_files
+        entryname: input_files
 
 inputs:
   input_type:
     type: string?
-    doc: Optional - detected input type from detect-input-type tool (not passed to script)
+    doc: Optional - input type from the workflow (not passed to script)
 
   skip_gunzip:
     type: boolean?
     default: false
     doc: Optional - for backward compatibility (not passed to script)
 
-  mzml_source_dir:
+  input_source_dir:
     type: Directory
     doc: Mounted Cavatica directory with gzipped mzML files
     inputBinding:
@@ -54,20 +54,20 @@ inputs:
       position: 4
 
 outputs:
-  mzml_directory:
+  input_directory:
     type: Directory
     outputBinding:
-      glob: "mzml_files"
+      glob: "input_files"
     doc: Directory containing unzipped mzML files
 
-  mzml_file_list:
+  input_file_list:
     type: File
     outputBinding:
-      glob: "mzml_files.txt"
+      glob: "input_files.txt"
     doc: Text file listing all unzipped mzML file paths
 
-  mzml_manifest:
+  input_manifest:
     type: File
     outputBinding:
-      glob: "mzml_manifest.fp-manifest"
+      glob: "input_manifest.fp-manifest"
     doc: FragPipe manifest file for decompressed mzML files

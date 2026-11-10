@@ -4,9 +4,10 @@ class: Workflow
 label: FragPipe Proteomics Pipeline
 doc: |
   Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
-  This workflow can process .raw, .mzML.gz, and .mzML files.
+  This workflow can process .raw, .mzML.gz, .mzML files, and Bruker timsTOF .d runs
+  (archived as <run>.d.zip, .d.tar, .d.tar.gz or .d.tgz).
   It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
-  Input type must be specified: "raw", "mzml_gz", or "mzml".
+  Input type must be specified: "raw", "mzml_gz", "mzml", or "d".
 
 requirements:
   InlineJavascriptRequirement: {}
@@ -33,15 +34,24 @@ inputs:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
   
-  # mzML/raw source (mounted Cavatica or S3 directory)
-  mzml_source_dir:
+  # Input data source (mounted Cavatica or S3 directory)
+  input_source_dir:
     type: Directory
-    doc: Directory containing input files (.raw, .mzML.gz, or .mzML)
+    doc: |
+      Directory containing input files: .raw, .mzML.gz, .mzML, or Bruker
+      .d.zip/.d.tar/.d.tar.gz/.d.tgz archives (renamed from mzml_source_dir in v1.2.0).
 
   input_type:
     type: string
-    doc: Type of input files - must be one of "raw", "mzml_gz", or "mzml"
-    
+    doc: Type of input files - must be one of "raw", "mzml_gz", "mzml", or "d"
+
+  skip_canonical_filter:
+    type: boolean
+    default: false
+    doc: |
+      If true, skip removing canonical proteins of genes named in query_fasta headers,
+      so wild-type sequences stay in the database and compete with query sequences.
+
   run_subset:
     type: boolean
     default: false
@@ -53,8 +63,8 @@ inputs:
     doc: |
       Full experiment or patient folder name to match when run_subset is true.
       Matches directory path in the folder structure (e.g., "N849" matches */N849/*)
-      Works for all input types: .raw, .mzML.gz, and .mzML files.
-      Raw files should be organized in the same folder structure as mzML files.
+      Works for all input types: .raw, .mzML.gz, .mzML and .d archives.
+      All input types should be organized in the same experiment folder structure.
       Not required when run_subset is false.
 
   output_basename:
@@ -69,7 +79,9 @@ inputs:
   run_pdv:
     type: boolean
     default: false
-    doc: If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv
+    doc: |
+      If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv.
+      Ignored for input_type "d" (PDV is skipped for Bruker .d runs).
 
   num_cores:
     type: int
@@ -114,14 +126,14 @@ steps:
     when: $(inputs.input_type === "raw")
     in:
       input_type: input_type
-      raw_source_dir: mzml_source_dir
+      raw_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
       num_cores: num_cores
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    out: [input_directory, input_file_list, input_manifest]
 
   # Step 1b: Gunzip mzML files (if input is .mzML.gz)
   gunzip_mzml:
@@ -129,13 +141,13 @@ steps:
     when: $(inputs.input_type === "mzml_gz")
     in:
       input_type: input_type
-      mzml_source_dir: mzml_source_dir
+      input_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
+    out: [input_directory, input_file_list, input_manifest]
 
   # Step 1c: Copy mzML files (if input is already .mzML)
   copy_mzml:
@@ -143,14 +155,28 @@ steps:
     when: $(inputs.input_type === "mzml")
     in:
       input_type: input_type
-      mzml_source_dir: mzml_source_dir
+      input_source_dir: input_source_dir
       run_subset:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
       manifest_file: manifest_file
-    out: [mzml_directory, mzml_file_list, mzml_manifest]
-    
+    out: [input_directory, input_file_list, input_manifest]
+
+  # Step 1d: Extract Bruker .d runs from .d.zip/.d.tar* archives (if input is timsTOF .d)
+  extract_d:
+    run: tools/extract-d.cwl
+    when: $(inputs.input_type === "d")
+    in:
+      input_type: input_type
+      input_source_dir: input_source_dir
+      run_subset:
+        source: run_subset
+        valueFrom: '$(self ? "true" : "false")'
+      subset_pattern: subset_pattern
+      manifest_file: manifest_file
+    out: [input_directory, input_file_list, input_manifest]
+
   # Step 2: Add decoys and contaminants to FASTA
   prepare_database:
     run: tools/philosopher-database.cwl
@@ -159,29 +185,33 @@ steps:
       uniprot_canonical_fasta: uniprot_canonical_fasta
     out: [fasta_with_decoys]
     
-  # Step 3: Filter canonical peptides
+  # Step 3: Filter canonical peptides (skipped when skip_canonical_filter is true)
   filter_canonical:
     run: tools/filter-canonical-peptides.cwl
+    when: $(inputs.skip_canonical_filter !== true)
     in:
+      skip_canonical_filter: skip_canonical_filter
       query_fasta: query_fasta
       fasta_with_decoys: prepare_database/fasta_with_decoys
     out: [filtered_fasta, gene_symbols]
-    
+
   # Step 4: Run FragPipe headless
   run_fragpipe:
     run: tools/fragpipe-headless.cwl
     in:
-      filtered_fasta: filter_canonical/filtered_fasta
+      filtered_fasta:
+        source: [filter_canonical/filtered_fasta, prepare_database/fasta_with_decoys]
+        pickValue: first_non_null
       workflow_file: workflow_file
       output_basename: output_basename
       manifest_file:
-        source: [convert_raw/mzml_manifest, gunzip_mzml/mzml_manifest, copy_mzml/mzml_manifest]
+        source: [convert_raw/input_manifest, gunzip_mzml/input_manifest, copy_mzml/input_manifest, extract_d/input_manifest]
         pickValue: first_non_null
-      mzml_directory:
-        source: [convert_raw/mzml_directory, gunzip_mzml/mzml_directory, copy_mzml/mzml_directory]
+      input_directory:
+        source: [convert_raw/input_directory, gunzip_mzml/input_directory, copy_mzml/input_directory, extract_d/input_directory]
         pickValue: first_non_null
     out:
-      - mzml_directory_out
+      - input_directory_out
       - results_dir
       - combined_protein
       - combined_peptide
@@ -203,14 +233,16 @@ steps:
       - control_overlap_summary
 
   # Step 6: Optional PDV plotting for control-filtered peptides
+  # (skipped for .d input: those runs have no <run>.mzML for PDV)
   run_pdv_plots:
     run: tools/fragpipe-pdv.cwl
-    when: $(inputs.run_pdv === true && inputs.control_combined_peptide !== null)
+    when: $(inputs.run_pdv === true && inputs.control_combined_peptide !== null && inputs.input_type !== "d")
     in:
+      input_type: input_type
       run_pdv: run_pdv
       control_combined_peptide: control_combined_peptide
       results_dir: run_fragpipe/results_dir
-      mzml_directory: run_fragpipe/mzml_directory_out
+      input_directory: run_fragpipe/input_directory_out
       target_peptide_table: filter_control_peptides/filtered_combined_peptide
       output_basename: output_basename
     out:
@@ -229,5 +261,5 @@ hints:
   value: "m5.8xlarge"
 
 "sbg:links":
-- id: "https://github.com/childrens-bti/fragpipe_cwl" # update with stable release in Cavatica
+- id: "https://github.com/childrens-bti/fragpipe_cwl/releases/tag/v1.2.0" # update with stable release in Cavatica
   label: github-release

@@ -15,7 +15,7 @@ RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
 NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
-OUT_DIR="$(pwd)/mzml_files"
+OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -25,8 +25,8 @@ mkdir -p "$OUT_DIR"
 
 if [ ! -d "$SOURCE_DIR" ]; then
   echo "ERROR: Source directory not found: $SOURCE_DIR" >&2
-  : > mzml_files.txt
-  : > mzml_manifest.fp-manifest
+  : > input_files.txt
+  : > input_manifest.fp-manifest
   exit 1
 fi
 
@@ -127,15 +127,19 @@ export -f process_file
 
 # Read manifest and collect files to process
 FILES_TO_PROCESS=()
+MANIFEST_RUNS=0
+missing=()
 while IFS=$'\t' read -r path_ignored exp_name rest; do
-  [[ -z "$exp_name" || "$exp_name" == "Experiment"* ]] && continue
+  exp_name="${exp_name%$'\r'}"
+  [[ -z "$exp_name" ]] && continue
+  MANIFEST_RUNS=$((MANIFEST_RUNS + 1))
   
   # Find .raw file matching the base name.
   # Use -L to follow symlinks: CWL stages directory contents as symlinks under /var/lib/cwl/stg*.
   found_files=$(find -L "$SOURCE_DIR_ABS" -type f -iname "${exp_name}.raw" 2>/dev/null || true)
   
   if [ -z "$found_files" ]; then
-    echo "WARNING: No .raw file found for $exp_name"
+    missing+=("$exp_name")
     continue
   fi
   
@@ -143,6 +147,18 @@ while IFS=$'\t' read -r path_ignored exp_name rest; do
     FILES_TO_PROCESS+=("$raw_file")
   done <<< "$found_files"
 done < "$MANIFEST_FILE"
+
+if [[ $MANIFEST_RUNS -eq 0 ]]; then
+  echo "ERROR: No run names in column 2 of $MANIFEST_FILE (expected tab-separated: path, run name, [experiment], [data type])" >&2
+  exit 2
+fi
+
+# A missing run would silently drop that sample from the search, so fail instead
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "ERROR: No matching .raw under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
+  printf '  %s\n' "${missing[@]}" >&2
+  exit 4
+fi
 
 # Process files in parallel using GNU parallel or xargs
 if command -v parallel &> /dev/null; then
@@ -154,15 +170,19 @@ else
 fi
 
 # Generate file list
-find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > mzml_files.txt
+find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > input_files.txt
 
 # Generate FragPipe manifest
-> mzml_manifest.fp-manifest
+> input_manifest.fp-manifest
 while IFS= read -r mzml_file; do
   basename_no_ext=$(basename "$mzml_file" .mzML)
   basename_no_ext=$(basename "$basename_no_ext" .mzml)
-  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> mzml_manifest.fp-manifest
-done < mzml_files.txt
+  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> input_manifest.fp-manifest
+done < input_files.txt
 
-NUM_FILES=$(wc -l < mzml_files.txt)
+NUM_FILES=$(wc -l < input_files.txt)
+if [[ $NUM_FILES -eq 0 ]]; then
+  echo "ERROR: No mzML files converted (check run_subset/subset_pattern)" >&2
+  exit 4
+fi
 echo "=== Converted $NUM_FILES files ==="

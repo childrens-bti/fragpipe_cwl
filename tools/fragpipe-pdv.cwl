@@ -12,14 +12,14 @@ baseCommand: [python3, /opt/scripts/fragpipe-pdv.py]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:fragpipe_v22"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
   InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.results_dir)
         entryname: $(inputs.results_dir.basename)
         writable: true
-      - entry: $(inputs.mzml_directory)
-        entryname: $(inputs.mzml_directory.basename)
+      - entry: $(inputs.input_directory)
+        entryname: $(inputs.input_directory.basename)
       - $(inputs.target_peptide_table)
 
 inputs:
@@ -31,13 +31,17 @@ inputs:
     type: File?
     doc: Optional passthrough control peptide file used by parent step gating
 
+  input_type:
+    type: string?
+    doc: Optional passthrough input type used by parent step gating (PDV is skipped for "d")
+
   results_dir:
     type: Directory
     doc: FragPipe results directory output by fragpipe-headless step
     inputBinding:
       position: 1
 
-  mzml_directory:
+  input_directory:
     type: Directory
     doc: Directory containing mzML files used by FragPipe
     inputBinding:
