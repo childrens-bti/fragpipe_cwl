@@ -94,18 +94,30 @@ if [[ -z "$MANIFEST_FILE" || ! -f "$MANIFEST_FILE" ]]; then
 fi
 echo "Using manifest file: $MANIFEST_FILE"
 # Read base names from 2nd column (tab-separated)
-mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{print $2}' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
+mapfile -t MANIFEST_BASENAMES < <(awk -F'\t' '{ sub(/\r$/, ""); print $2 }' "$MANIFEST_FILE" | grep -v '^$' | sort | uniq)
+if [[ ${#MANIFEST_BASENAMES[@]} -eq 0 ]]; then
+  echo "ERROR: No run names in column 2 of $MANIFEST_FILE (expected tab-separated: path, run name, [experiment], [data type])" >&2
+  exit 2
+fi
 # Process files from both flat and nested layouts under SOURCE_DIR.
 # For each manifest base name, find the first matching file at any depth.
+missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
   # Find the first match at any depth (flat layout or experiment subfolders).
   f=$(find "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
   if [[ -n "$f" ]]; then
     process_file "$f"
   else
-    echo "WARNING: No matching mzML.gz found for $m under $SOURCE_DIR" >&2
+    missing+=("$m")
   fi
 done
+
+# A missing run would silently drop that sample from the search, so fail instead
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "ERROR: No matching mzML.gz under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
+  printf '  %s\n' "${missing[@]}" >&2
+  exit 4
+fi
 
 # Create input_files.txt (all mzML paths)
 find "$OUT_DIR" -type f -name "*.mzML" | sort > input_files.txt
@@ -115,6 +127,11 @@ while IFS= read -r filepath; do
   basename=$(basename "$filepath" .mzML)
   echo -e "${filepath}\t${basename}\t\tDDA"
 done < input_files.txt > input_manifest.fp-manifest
+
+if [[ ! -s input_files.txt ]]; then
+  echo "ERROR: No mzML files staged (check run_subset/subset_pattern)" >&2
+  exit 4
+fi
 
 echo "Decompression complete. $(wc -l < input_files.txt) mzML files ready."
 echo "Experiments found:"

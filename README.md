@@ -116,7 +116,7 @@ source_dir/
 ├── run_002.d.tar.gz
 └── run_003.d.tgz                 # .d.zip, .d.tar, .d.tar.gz or .d.tgz
 ```
-Each archive must contain a single top-level `<run>.d/` folder with `analysis.tdf` (and `analysis.tdf_bin`), or the step fails. Uncompressed `.d` folders are not accepted; archive them first (e.g. `zip -0 -r run_001.d.zip run_001.d`). This matches the archived-run naming in the proteomics and immunopeptidomics manifests ([manifest-template](https://github.com/childrens-bti/manifest-template)).
+Each archive must contain a single top-level `<run>.d/` folder with `analysis.tdf` and `analysis.tdf_bin`, or the step fails. Every run named in the manifest must have a matching archive, or the step fails rather than searching a subset of the samples. Uncompressed `.d` folders are not accepted (they count as missing); archive them first (e.g. `zip -0 -r run_001.d.zip run_001.d`). This matches the archived-run naming in the proteomics and immunopeptidomics manifests ([manifest-template](https://github.com/childrens-bti/manifest-template)).
 
 #### Step 2: Create a Manifest File
 
@@ -308,12 +308,12 @@ cwltool --leave-tmpdir --tmpdir-prefix ./.cwl-tmp/ \
 
 Upload workflow to Cavatica:
 ```bash
-sbpack cavatica childrens-bti/impact-trial-cwl/fragpipe_cwl fragpipe-cavatica.cwl
+sbpack cavatica childrens-bti/impact-trial-cwl/fragpipe_cwl fragpipe.cwl
 ```
 
 Then configure and run via the Cavatica web interface.
 
-For parameter file examples, see [`params/fragpipe-inputs.yml`](params/fragpipe-inputs.yml) for mzML and [`params/fragpipe-raw-inputs.yml`](params/fragpipe-raw-inputs.yml) for .raw files.
+`params/` is gitignored (params files hold project-specific paths), so the files named in the examples above are local only. Use the parameter examples in [Step 3](#step-3-prepare-input-parameters) as a starting point.
 
 ## Manifest File Specification
 
@@ -325,7 +325,7 @@ The manifest file (`.fp-manifest`) is a tab-separated file that lists the mzML/r
 
 ### File Format
 
-The manifest file has **4 tab-separated columns**:
+The manifest file has **4 tab-separated columns** and **no header row**; every non-empty line is a run:
 
 ```
 <file_path>	<basename>	<annotation>	<data_type>
@@ -343,6 +343,7 @@ The manifest file has **4 tab-separated columns**:
 1. **Column 1 is not used** - The workflow reads basenames from column 2 to locate files
 2. **Column 2 must match filenames exactly** (without extension; for `.d` input, the run name without `.d` or the archive extension)
 3. **Manifest is auto-regenerated** - A new manifest with correct full paths is created before FragPipe execution
+4. **Every run must be found** - For every input type, the staging step fails if any column-2 run has no matching file under `input_source_dir`, if column 2 is empty, or if `run_subset` leaves no files. Runs outside the subset folder are skipped, not reported missing
 
 ### Input Manifest Examples
 
@@ -403,7 +404,7 @@ Auto-generate new manifest with full local paths
 | **Optional Canonical Filter** | `skip_canonical_filter: true` keeps wild-type proteins in the database (e.g. minigene / immunopeptidomics searches) |
 | **Automatic Manifest Generation** | Builds the FragPipe manifest with local paths from the processed files; the input manifest (column 2 = run names) is still required |
 | **Subset Processing** | With `run_subset: true`, process only files under a folder named `subset_pattern` |
-| **TMT Annotation Support** | Automatically copies `annotation.txt` files from experiment directories |
+| **TMT Annotation Support** | Automatically copies `annotation.txt` files from experiment directories (`raw`, `mzml_gz` and `mzml` only; not yet for `d`) |
 | **Dynamic FASTA Injection** | Workflow file updated at runtime with correct FASTA path |
 | **Mutation-Position Gating** | Optional control filter keeps variant/fusion peptides only when peptide `Start`-`End` overlaps `peptMutPos` or `Protein_fusion_site` (splice IDs exempt) |
 | **Writable mzML Directory** | Uses `InplaceUpdateRequirement` for FragPipe temporary files |
@@ -457,10 +458,10 @@ docker push pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0
 - **Cavatica Account**: For accessing project data and platform execution
 
 **Note on .raw file conversion:**
-- When processing .raw files, cwltool will automatically pull the `chambm/pwiz-skyline-i-agree-to-the-vendor-licenses` Docker image
+- When processing .raw files, the `convert_raw` step uses `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0` (built from `Dockerfile.pwiz`). It is a private registry image, so run `docker login pgc-images.sbgenomics.com` before running locally
 - This image is ~4GB and contains ProteoWizard msconvert with wine
 - First-time conversion will take longer due to image download
-- By using this image, you agree to vendor licenses for Thermo Fisher raw file reading libraries
+- The image is built on ProteoWizard's vendor-library image; using it means you agree to the Thermo Fisher raw file reading library licenses
 
 ## Output Files
 
@@ -476,6 +477,7 @@ outputs/
 ├── SAMPLE001_control_overlap_summary.txt           # Control-filter summary including mutation/overlap counts (optional)
 ├── SAMPLE001_pdv_spectra/                          # PDV batch output directory (optional)
 │   ├── <sample_name>/                              # Per-sample PDV PDFs and scan list
+│   │   └── <run_name>/                             # Extra level only when a results folder holds more than one run
 │   └── pdv_summary.tsv                             # Run-level summary (peptide/scans plotted)
 ├── SAMPLE001_combined_modified_peptide.tsv     # Modified peptide quantification
 ├── SAMPLE001_combined_ion.tsv                  # Ion-level quantification

@@ -87,8 +87,8 @@ extract_archive() {
     find "$staging" -mindepth 1 -maxdepth 1 -printf "  found: %f\n" >&2
     exit 3
   fi
-  if [[ ! -f "$staging/$run.d/analysis.tdf" ]]; then
-    echo "ERROR: $run.d from $(basename "$archive") has no analysis.tdf (not a timsTOF .d run)" >&2
+  if [[ ! -f "$staging/$run.d/analysis.tdf" || ! -f "$staging/$run.d/analysis.tdf_bin" ]]; then
+    echo "ERROR: $run.d from $(basename "$archive") is missing analysis.tdf or analysis.tdf_bin (not a complete timsTOF .d run)" >&2
     exit 3
   fi
   mv "$staging/$run.d" "$out_exp_dir/"
@@ -103,12 +103,17 @@ if [[ -z "$MANIFEST_FILE" || ! -f "$MANIFEST_FILE" ]]; then
 fi
 echo "Using manifest file: $MANIFEST_FILE"
 # Read base names (2nd column) and optional data type (4th column, default DDA)
-declare -A DATA_TYPE
+declare -A DATA_TYPE=()
 while IFS=$'\t' read -r base dtype; do
   DATA_TYPE["$base"]="$dtype"
 done < <(awk -F'\t' '{ sub(/\r$/, "") } $2 != "" { print $2 "\t" ($4 != "" ? $4 : "DDA") }' "$MANIFEST_FILE")
+if [[ ${#DATA_TYPE[@]} -eq 0 ]]; then
+  echo "ERROR: No run names in column 2 of $MANIFEST_FILE (expected tab-separated: path, run name, [experiment], [data type])" >&2
+  exit 2
+fi
 
 # For each manifest base name, find the first matching .d archive under SOURCE_DIR
+missing=()
 for m in "${!DATA_TYPE[@]}"; do
   matches=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
   d=$(head -n 1 <<< "$matches")
@@ -119,9 +124,17 @@ for m in "${!DATA_TYPE[@]}"; do
   if [[ -n "$d" ]]; then
     process_archive "$d" "$m"
   else
-    echo "WARNING: No matching .d.zip/.d.tar/.d.tar.gz/.d.tgz archive found for $m under $SOURCE_DIR" >&2
+    missing+=("$m")
   fi
 done
+
+# A missing run would silently drop that sample from the search, so fail instead
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "ERROR: No matching .d.zip/.d.tar/.d.tar.gz/.d.tgz archive under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
+  printf '  %s\n' "${missing[@]}" | sort >&2
+  echo "Uncompressed .d folders are not accepted; archive each run as <run>.d.zip (or .d.tar/.d.tar.gz/.d.tgz)." >&2
+  exit 4
+fi
 
 # Create input_files.txt (all extracted .d paths)
 find "$OUT_DIR" -mindepth 2 -maxdepth 2 -type d -name "*.d" | sort > input_files.txt
@@ -131,6 +144,11 @@ while IFS= read -r dpath; do
   basename=$(basename "$dpath" .d)
   echo -e "${dpath}\t${basename}\t\t${DATA_TYPE[$basename]:-DDA}"
 done < input_files.txt > input_manifest.fp-manifest
+
+if [[ ! -s input_files.txt ]]; then
+  echo "ERROR: No .d runs extracted (check run_subset/subset_pattern)" >&2
+  exit 4
+fi
 
 echo "Extraction complete. $(wc -l < input_files.txt) .d directories ready."
 echo "Experiments found:"

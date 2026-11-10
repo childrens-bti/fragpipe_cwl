@@ -21,7 +21,7 @@ requirements:
 inputs:
   input_type:
     type: string?
-    doc: Optional - detected input type from detect-input-type tool (not passed to script)
+    doc: Optional - input type from the workflow (not passed to script)
 
   raw_source_dir:
     type: Directory

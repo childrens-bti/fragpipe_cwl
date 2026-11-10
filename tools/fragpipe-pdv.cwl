@@ -31,6 +31,10 @@ inputs:
     type: File?
     doc: Optional passthrough control peptide file used by parent step gating
 
+  input_type:
+    type: string?
+    doc: Optional passthrough input type used by parent step gating (PDV is skipped for "d")
+
   results_dir:
     type: Directory
     doc: FragPipe results directory output by fragpipe-headless step

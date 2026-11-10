@@ -4,7 +4,8 @@ class: Workflow
 label: FragPipe Proteomics Pipeline
 doc: |
   Complete FragPipe proteomics analysis pipeline for both LOCAL and CAVATICA execution.
-  This workflow can process .raw, .mzML.gz, .mzML files, and Bruker timsTOF .d directories.
+  This workflow can process .raw, .mzML.gz, .mzML files, and Bruker timsTOF .d runs
+  (archived as <run>.d.zip, .d.tar, .d.tar.gz or .d.tgz).
   It performs FASTA preparation with decoys/contaminants and runs FragPipe analysis.
   Input type must be specified: "raw", "mzml_gz", "mzml", or "d".
 
@@ -62,8 +63,8 @@ inputs:
     doc: |
       Full experiment or patient folder name to match when run_subset is true.
       Matches directory path in the folder structure (e.g., "N849" matches */N849/*)
-      Works for all input types: .raw, .mzML.gz, and .mzML files.
-      Raw files should be organized in the same folder structure as mzML files.
+      Works for all input types: .raw, .mzML.gz, .mzML and .d archives.
+      All input types should be organized in the same experiment folder structure.
       Not required when run_subset is false.
 
   output_basename:

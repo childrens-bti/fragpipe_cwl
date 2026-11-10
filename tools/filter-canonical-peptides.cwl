@@ -19,6 +19,10 @@ requirements:
       - $(inputs.fasta_with_decoys)
 
 inputs:
+  skip_canonical_filter:
+    type: boolean?
+    doc: Optional passthrough workflow flag used by parent step gating
+
   query_fasta:
     type: File
     doc: Original custom FASTA file (used to extract gene symbols)
