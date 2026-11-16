@@ -29,6 +29,9 @@ outputs/*
 params/*
 !outputs/.gitkeep
 !params/.gitkeep
+# Tracked parameter presets (paths left as commented placeholders)
+!params/tmt-joint-hope.yml
+!params/tmt-joint-cptac.yml
 test/
 logs/*
 !logs/.gitkeep

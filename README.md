@@ -315,6 +315,50 @@ Then configure and run via the Cavatica web interface.
 
 `params/` is gitignored (params files hold project-specific paths), so the files named in the examples above are local only. Use the parameter examples in [Step 3](#step-3-prepare-input-parameters) as a starting point.
 
+## Joint TMT Search Across Plexes
+
+By default every input file is given its own FragPipe *experiment*, so each
+fraction is searched as an independent unit. A **joint** TMT search instead puts
+every fraction of a plex under one experiment, which shares protein inference and
+FDR estimation across plexes and lets TMT-Integrator emit a single cross-plex
+abundance report.
+
+Set `group_by_experiment: true`:
+
+```yaml
+group_by_experiment: true
+```
+
+The experiment is taken from the **staged plex directory**, so `input_source_dir`
+must be organised one sub-directory per plex, each holding that plex's spectra and
+its `annotation.txt`:
+
+```
+<input_source_dir>/
+├── 01/   ...mzML   annotation.txt
+├── 02/   ...mzML   annotation.txt
+└── 23/   ...mzML   annotation.txt
+```
+
+Ready-made parameter files are in `params/`:
+
+| preset | cohort | plexes | reporter ions |
+|---|---|---|---|
+| `params/tmt-joint-hope.yml` | HOPE (PNNL) | 10 | MS2 |
+| `params/tmt-joint-cptac.yml` | PDC000180 (CBTTC/HMS) | 23 | **MS3** |
+
+### MS2 vs MS3 TMT
+
+Whether reporter ions are read from MS2 or MS3 scans is a property of the
+**workflow file**, not of this CWL — `tmtintegrator.quant_level` is 2 or 3.
+Getting it wrong fails *silently*: the run completes with every stage exiting 0,
+but reporter channels are empty and the TMT report collapses. PDC000180 is
+MS3-based and its workflow file sets `quant_level=3`; HOPE is MS2-based and stays
+at 2. Do not copy one cohort's workflow file to the other without checking.
+
+The workflow files themselves are plex-count agnostic — nothing in them changes
+between a joint and a per-file run.
+
 ## Manifest File Specification
 
 ### Overview

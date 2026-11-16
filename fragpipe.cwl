@@ -30,6 +30,15 @@ inputs:
     type: File
     doc: FragPipe workflow configuration file (e.g., data/HOPEproteome_TMT11workflow.workflow)
     
+  group_by_experiment:
+    type: boolean
+    default: false
+    doc: |
+      Group every fraction of a plex under one FragPipe experiment, taken from the
+      staged plex directory name. Required for a joint TMT search across plexes,
+      which shares protein inference and FDR estimation and lets TMT-Integrator
+      emit a single cross-plex report. Default false keeps one experiment per file,
+      which is the historical behaviour.
   manifest_file:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
@@ -131,6 +140,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
       num_cores: num_cores
     out: [input_directory, input_file_list, input_manifest]
@@ -146,6 +158,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
     out: [input_directory, input_file_list, input_manifest]
 
@@ -160,6 +175,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
     out: [input_directory, input_file_list, input_manifest]
 
@@ -174,6 +192,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
     out: [input_directory, input_file_list, input_manifest]
 

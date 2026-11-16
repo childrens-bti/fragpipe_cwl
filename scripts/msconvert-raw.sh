@@ -9,12 +9,31 @@ echo "Using per-worker Wine isolation (current uid: $CURRENT_UID, owner uid: $WI
 export WINEARCH=win64
 export WINEDEBUG=-all
 
-# Usage: msconvert-raw.sh <SOURCE_DIR> <RUN_SUBSET> <SUBSET_PATTERN> <MANIFEST_FILE> [NUM_CORES]
+# Usage: msconvert-raw.sh <SOURCE_DIR> <RUN_SUBSET> <SUBSET_PATTERN> <MANIFEST_FILE> [NUM_CORES] [GROUP_BY_EXPERIMENT]
 SOURCE_DIR="$1"
 RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
+# Resolve the FragPipe manifest "experiment" column (column 2).
+# Files are staged into $OUT_DIR/<experiment>/, so the plex is the directory
+# holding the file. A joint search needs every fraction of a plex to share one
+# experiment value; the default preserves the historical behaviour of giving
+# each file its own experiment, so existing runs are unaffected.
+manifest_experiment() {
+  local fp="$1" base="$2" exp
+  if [[ "${GROUP_BY_EXPERIMENT:-false}" != "true" ]]; then
+    printf '%s' "$base"; return
+  fi
+  exp="$(basename "$(dirname "$fp")")"
+  if [[ -z "$exp" || "$exp" == "input_files" ]]; then
+    printf '%s' "$base"
+  else
+    printf '%s' "$exp"
+  fi
+}
+
 NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
+GROUP_BY_EXPERIMENT="${6:-false}"
 OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
@@ -177,7 +196,7 @@ find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > input_fi
 while IFS= read -r mzml_file; do
   basename_no_ext=$(basename "$mzml_file" .mzML)
   basename_no_ext=$(basename "$basename_no_ext" .mzml)
-  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> input_manifest.fp-manifest
+  echo -e "${mzml_file}\t$(manifest_experiment "$mzml_file" "$basename_no_ext")\t\tDDA" >> input_manifest.fp-manifest
 done < input_files.txt
 
 NUM_FILES=$(wc -l < input_files.txt)

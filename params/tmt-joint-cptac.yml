@@ -1,0 +1,37 @@
+# CPTAC PDC000180 (CBTTC/HMS) -- TMT 11-plex JOINT search (23 plexes, MS3-based reporter ions)
+#
+# Joint search: every fraction of a plex shares one FragPipe experiment, so
+# protein inference and FDR estimation are shared across plexes and
+# TMT-Integrator emits a single cross-plex abundance report.
+#
+# group_by_experiment: true takes the experiment from the staged plex directory,
+# so input_source_dir MUST be organised one sub-directory per plex, each holding
+# that plex's mzML files and its annotation.txt:
+#
+#   <input_source_dir>/01/...mzML + annotation.txt
+#   <input_source_dir>/02/...mzML + annotation.txt
+#   ...
+#
+# PDC000180 is MS3-based TMT: reporter ions are in MS3 scans, so its workflow sets
+# tmtintegrator.quant_level=3. Its MS2 scans are ion trap (lowest m/z ~350) and carry
+# no reporter region. Running it at quant_level=2 completes normally but leaves every
+# reporter channel empty -- see the workflow file description.
+
+group_by_experiment: true
+
+workflow_file:
+  class: File
+  path: ../data/workflow_files/PDC000180_proteome_TMT11.mod.v22.workflow.txt
+
+input_type: mzml
+run_subset: false
+run_pdv: false
+skip_canonical_filter: false
+num_cores: 8
+output_basename: PDC000180_TMT11_joint
+
+# Supply these for your environment:
+# manifest_file:          { class: File, path: ../manifests/PDC000180.fp-manifest }
+# input_source_dir:       { class: Directory, path: ../data/cavatica-data/PDC000180 }
+# query_fasta:            { class: File, path: ../data/custom_filtered.fasta }
+# uniprot_canonical_fasta:{ class: File, path: ../data/references/UP000005640_9606.fasta.gz }

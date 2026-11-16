@@ -2,12 +2,31 @@
 set -euo pipefail
 
 
-# Usage: gunzip-mzml.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
+# Usage: gunzip-mzml.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE> [GROUP_BY_EXPERIMENT]
 SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
+GROUP_BY_EXPERIMENT="${5:-false}"
 OUT_DIR="$(pwd)/input_files"
+# Resolve the FragPipe manifest "experiment" column (column 2).
+# Files are staged into $OUT_DIR/<experiment>/, so the plex is the directory
+# holding the file. A joint search needs every fraction of a plex to share one
+# experiment value; the default preserves the historical behaviour of giving
+# each file its own experiment, so existing runs are unaffected.
+manifest_experiment() {
+  local fp="$1" base="$2" exp
+  if [[ "${GROUP_BY_EXPERIMENT:-false}" != "true" ]]; then
+    printf '%s' "$base"; return
+  fi
+  exp="$(basename "$(dirname "$fp")")"
+  if [[ -z "$exp" || "$exp" == "input_files" ]]; then
+    printf '%s' "$base"
+  else
+    printf '%s' "$exp"
+  fi
+}
+
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -125,7 +144,7 @@ find "$OUT_DIR" -type f -name "*.mzML" | sort > input_files.txt
 # input_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
 while IFS= read -r filepath; do
   basename=$(basename "$filepath" .mzML)
-  echo -e "${filepath}\t${basename}\t\tDDA"
+  echo -e "${filepath}\t$(manifest_experiment "$filepath" "$basename")\t\tDDA"
 done < input_files.txt > input_manifest.fp-manifest
 
 if [[ ! -s input_files.txt ]]; then

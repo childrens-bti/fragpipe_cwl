@@ -10,6 +10,25 @@ SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
+GROUP_BY_EXPERIMENT="${5:-false}"
+# Resolve the FragPipe manifest "experiment" column (column 2).
+# Files are staged into $OUT_DIR/<experiment>/, so the plex is the directory
+# holding the file. A joint search needs every fraction of a plex to share one
+# experiment value; the default preserves the historical behaviour of giving
+# each file its own experiment, so existing runs are unaffected.
+manifest_experiment() {
+  local fp="$1" base="$2" exp
+  if [[ "${GROUP_BY_EXPERIMENT:-false}" != "true" ]]; then
+    printf '%s' "$base"; return
+  fi
+  exp="$(basename "$(dirname "$fp")")"
+  if [[ -z "$exp" || "$exp" == "input_files" ]]; then
+    printf '%s' "$base"
+  else
+    printf '%s' "$exp"
+  fi
+}
+
 OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
@@ -142,7 +161,7 @@ find "$OUT_DIR" -mindepth 2 -maxdepth 2 -type d -name "*.d" | sort > input_files
 # input_manifest.fp-manifest: FragPipe format (path, basename without .d, empty, data type)
 while IFS= read -r dpath; do
   basename=$(basename "$dpath" .d)
-  echo -e "${dpath}\t${basename}\t\t${DATA_TYPE[$basename]:-DDA}"
+  echo -e "${dpath}\t$(manifest_experiment "$dpath" "$basename")\t\t${DATA_TYPE[$basename]:-DDA}"
 done < input_files.txt > input_manifest.fp-manifest
 
 if [[ ! -s input_files.txt ]]; then
