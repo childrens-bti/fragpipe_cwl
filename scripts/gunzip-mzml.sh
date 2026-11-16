@@ -123,7 +123,7 @@ fi
 missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
   # Find the first match at any depth (flat layout or experiment subfolders).
-  f=$(find "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
+  f=$(find -L "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
   if [[ -n "$f" ]]; then
     process_file "$f"
   else
@@ -135,6 +135,7 @@ done
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "ERROR: No matching mzML.gz under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
   printf '  %s\n' "${missing[@]}" >&2
+  echo "Check the manifest: column 2 must be the run name (filename without extension), and the manifest must have no header row." >&2
   exit 4
 fi
 
