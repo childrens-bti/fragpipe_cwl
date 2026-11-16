@@ -38,7 +38,9 @@ inputs:
       staged plex directory name. Required for a joint TMT search across plexes,
       which shares protein inference and FDR estimation and lets TMT-Integrator
       emit a single cross-plex report. Default false keeps one experiment per file,
-      which is the historical behaviour.
+      which is the historical behaviour. TMT workflows only: with LFQ/DIA/HLA it
+      merges per-run intensities into per-folder ones. Requires the
+      <input_source_dir>/<plex>/<file> layout; staging exits 5 otherwise.
   manifest_file:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)

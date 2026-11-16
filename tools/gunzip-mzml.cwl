@@ -62,6 +62,8 @@ inputs:
       a plex shares one experiment -- required for a joint TMT search. When
       "false" (default) each file gets its own experiment, preserving the
       historical behaviour.
+      TMT workflows only. Requires <input_source_dir>/<plex>/<file> layout;
+      exits 5 if any file is directly in input_source_dir or deeper.
     inputBinding:
       position: 5
 

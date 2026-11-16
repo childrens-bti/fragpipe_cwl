@@ -313,7 +313,7 @@ sbpack cavatica childrens-bti/impact-trial-cwl/fragpipe_cwl fragpipe.cwl
 
 Then configure and run via the Cavatica web interface.
 
-`params/` is gitignored (params files hold project-specific paths), so the files named in the examples above are local only. Use the parameter examples in [Step 3](#step-3-prepare-input-parameters) as a starting point.
+`params/` is gitignored (params files hold project-specific paths), so the files named in the examples above are local only. The exceptions are the two tracked presets `params/tmt-joint-hope.yml` and `params/tmt-joint-cptac.yml` (see [Joint TMT Search Across Plexes](#joint-tmt-search-across-plexes)), which leave environment-specific paths as commented placeholders. Use the parameter examples in [Step 3](#step-3-prepare-input-parameters) as a starting point.
 
 ## Joint TMT Search Across Plexes
 
@@ -339,6 +339,16 @@ its `annotation.txt`:
 ├── 02/   ...mzML   annotation.txt
 └── 23/   ...mzML   annotation.txt
 ```
+
+Staging enforces this: with `group_by_experiment: true`, any file sitting directly
+in `input_source_dir` or more than one level deep (e.g. `<cohort>/<plex>/`) fails
+the run with exit code 5, because either layout would merge every plex into one
+experiment.
+
+`group_by_experiment` is for **TMT workflows only**. With LFQ, DIA or HLA
+workflows it merges per-run intensities into per-folder ones; FragPipe headless
+prints a warning if experiments are shared but the workflow does not run
+TMT-Integrator.
 
 Ready-made parameter files are in `params/`:
 
