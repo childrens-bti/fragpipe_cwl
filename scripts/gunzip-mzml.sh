@@ -9,23 +9,8 @@ SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
 GROUP_BY_EXPERIMENT="${5:-false}"
 OUT_DIR="$(pwd)/input_files"
-# Resolve the FragPipe manifest "experiment" column (column 2).
-# Files are staged into $OUT_DIR/<experiment>/, so the plex is the directory
-# holding the file. A joint search needs every fraction of a plex to share one
-# experiment value; the default preserves the historical behaviour of giving
-# each file its own experiment, so existing runs are unaffected.
-manifest_experiment() {
-  local fp="$1" base="$2" exp
-  if [[ "${GROUP_BY_EXPERIMENT:-false}" != "true" ]]; then
-    printf '%s' "$base"; return
-  fi
-  exp="$(basename "$(dirname "$fp")")"
-  if [[ -z "$exp" || "$exp" == "input_files" ]]; then
-    printf '%s' "$base"
-  else
-    printf '%s' "$exp"
-  fi
-}
+# shellcheck source=staging-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/staging-lib.sh"
 
 
 # Ensure output path is a directory
@@ -120,12 +105,13 @@ if [[ ${#MANIFEST_BASENAMES[@]} -eq 0 ]]; then
 fi
 # Process files from both flat and nested layouts under SOURCE_DIR.
 # For each manifest base name, find the first matching file at any depth.
+found=()
 missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
-  # Find the first match at any depth (flat layout or experiment subfolders).
+  # Find the first match under SOURCE_DIR (top-level or nested)
   f=$(find "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
   if [[ -n "$f" ]]; then
-    process_file "$f"
+    found+=("$f")
   else
     missing+=("$m")
   fi
@@ -137,6 +123,12 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   printf '  %s\n' "${missing[@]}" >&2
   exit 4
 fi
+
+check_plex_layout "$SOURCE_DIR" "${found[@]}"
+
+for f in "${found[@]}"; do
+  process_file "$f"
+done
 
 # Create input_files.txt (all mzML paths)
 find "$OUT_DIR" -type f -name "*.mzML" | sort > input_files.txt

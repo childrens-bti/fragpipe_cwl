@@ -2,7 +2,7 @@
 set -euo pipefail
 
 
-# Usage: extract-d.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
+# Usage: extract-d.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE> [GROUP_BY_EXPERIMENT]
 # Extract Bruker timsTOF runs from <run>.d.zip, .d.tar, .d.tar.gz or .d.tgz
 # archives and generate a FragPipe manifest. Each archive must hold <run>.d/
 # at its root. MSFragger reads .d natively, so no conversion is done.
@@ -11,23 +11,8 @@ RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
 GROUP_BY_EXPERIMENT="${5:-false}"
-# Resolve the FragPipe manifest "experiment" column (column 2).
-# Files are staged into $OUT_DIR/<experiment>/, so the plex is the directory
-# holding the file. A joint search needs every fraction of a plex to share one
-# experiment value; the default preserves the historical behaviour of giving
-# each file its own experiment, so existing runs are unaffected.
-manifest_experiment() {
-  local fp="$1" base="$2" exp
-  if [[ "${GROUP_BY_EXPERIMENT:-false}" != "true" ]]; then
-    printf '%s' "$base"; return
-  fi
-  exp="$(basename "$(dirname "$fp")")"
-  if [[ -z "$exp" || "$exp" == "input_files" ]]; then
-    printf '%s' "$base"
-  else
-    printf '%s' "$exp"
-  fi
-}
+# shellcheck source=staging-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/staging-lib.sh"
 
 OUT_DIR="$(pwd)/input_files"
 
@@ -132,6 +117,8 @@ if [[ ${#DATA_TYPE[@]} -eq 0 ]]; then
 fi
 
 # For each manifest base name, find the first matching .d archive under SOURCE_DIR
+found=()
+found_run=()
 missing=()
 for m in "${!DATA_TYPE[@]}"; do
   matches=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
@@ -141,7 +128,8 @@ for m in "${!DATA_TYPE[@]}"; do
     tail -n +2 <<< "$matches" | sed 's/^/  /' >&2
   fi
   if [[ -n "$d" ]]; then
-    process_archive "$d" "$m"
+    found+=("$d")
+    found_run+=("$m")
   else
     missing+=("$m")
   fi
@@ -154,6 +142,12 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   echo "Uncompressed .d folders are not accepted; archive each run as <run>.d.zip (or .d.tar/.d.tar.gz/.d.tgz)." >&2
   exit 4
 fi
+
+check_plex_layout "$SOURCE_DIR" "${found[@]}"
+
+for i in "${!found[@]}"; do
+  process_archive "${found[$i]}" "${found_run[$i]}"
+done
 
 # Create input_files.txt (all extracted .d paths)
 find "$OUT_DIR" -mindepth 2 -maxdepth 2 -type d -name "*.d" | sort > input_files.txt

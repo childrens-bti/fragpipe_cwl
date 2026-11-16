@@ -14,23 +14,8 @@ SOURCE_DIR="$1"
 RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
-# Resolve the FragPipe manifest "experiment" column (column 2).
-# Files are staged into $OUT_DIR/<experiment>/, so the plex is the directory
-# holding the file. A joint search needs every fraction of a plex to share one
-# experiment value; the default preserves the historical behaviour of giving
-# each file its own experiment, so existing runs are unaffected.
-manifest_experiment() {
-  local fp="$1" base="$2" exp
-  if [[ "${GROUP_BY_EXPERIMENT:-false}" != "true" ]]; then
-    printf '%s' "$base"; return
-  fi
-  exp="$(basename "$(dirname "$fp")")"
-  if [[ -z "$exp" || "$exp" == "input_files" ]]; then
-    printf '%s' "$base"
-  else
-    printf '%s' "$exp"
-  fi
-}
+# shellcheck source=staging-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/staging-lib.sh"
 
 NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
 GROUP_BY_EXPERIMENT="${6:-false}"
@@ -178,6 +163,8 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   printf '  %s\n' "${missing[@]}" >&2
   exit 4
 fi
+
+check_plex_layout "$SOURCE_DIR_ABS" "${FILES_TO_PROCESS[@]}"
 
 # Process files in parallel using GNU parallel or xargs
 if command -v parallel &> /dev/null; then
