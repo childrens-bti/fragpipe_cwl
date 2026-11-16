@@ -129,7 +129,7 @@ export -f process_file
 FILES_TO_PROCESS=()
 MANIFEST_RUNS=0
 missing=()
-while IFS=$'\t' read -r path_ignored exp_name rest; do
+while IFS=$'\t' read -r path_ignored exp_name rest || [[ -n "$exp_name" ]]; do
   exp_name="${exp_name%$'\r'}"
   [[ -z "$exp_name" ]] && continue
   MANIFEST_RUNS=$((MANIFEST_RUNS + 1))
