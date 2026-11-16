@@ -115,7 +115,7 @@ fi
 # For each manifest base name, find the first matching .d archive under SOURCE_DIR
 missing=()
 for m in "${!DATA_TYPE[@]}"; do
-  matches=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
+  matches=$(find -L "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
   d=$(head -n 1 <<< "$matches")
   if [[ $(grep -c . <<< "$matches") -gt 1 ]]; then
     echo "WARNING: Multiple archives found for $m; using $d and ignoring:" >&2

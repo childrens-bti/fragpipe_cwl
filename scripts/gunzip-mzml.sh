@@ -104,7 +104,7 @@ fi
 missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
   # Find the first match at any depth (flat layout or experiment subfolders).
-  f=$(find "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
+  f=$(find -L "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
   if [[ -n "$f" ]]; then
     process_file "$f"
   else

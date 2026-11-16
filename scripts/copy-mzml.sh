@@ -105,7 +105,7 @@ fi
 missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
   # Find the first match under SOURCE_DIR (top-level or nested)
-  f=$(find "$SOURCE_DIR" -type f -name "$m.mzML" | head -n 1)
+  f=$(find -L "$SOURCE_DIR" -type f -name "$m.mzML" | head -n 1)
   if [[ -n "$f" ]]; then
     process_file "$f"
   else
