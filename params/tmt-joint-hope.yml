@@ -31,4 +31,4 @@ output_basename: HOPE_TMT11_joint
 # manifest_file:          { class: File, path: ../manifests/HOPE.fp-manifest }
 # input_source_dir:       { class: Directory, path: ../data/cavatica-data/HOPE }
 # query_fasta:            { class: File, path: ../data/custom_filtered.fasta }
-# uniprot_canonical_fasta:{ class: File, path: ../data/references/UP000005640_9606.fasta.gz }
+# uniprot_canonical_fasta: { class: File, path: ../data/references/UP000005640_9606_07242024.fasta }

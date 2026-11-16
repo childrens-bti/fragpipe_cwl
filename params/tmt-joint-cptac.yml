@@ -34,4 +34,4 @@ output_basename: PDC000180_TMT11_joint
 # manifest_file:          { class: File, path: ../manifests/PDC000180.fp-manifest }
 # input_source_dir:       { class: Directory, path: ../data/cavatica-data/PDC000180 }
 # query_fasta:            { class: File, path: ../data/custom_filtered.fasta }
-# uniprot_canonical_fasta:{ class: File, path: ../data/references/UP000005640_9606.fasta.gz }
+# uniprot_canonical_fasta: { class: File, path: ../data/references/UP000005640_9606_07242024.fasta }
