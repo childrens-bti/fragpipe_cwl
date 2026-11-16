@@ -132,6 +132,7 @@ done
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "ERROR: No matching .d.zip/.d.tar/.d.tar.gz/.d.tgz archive under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
   printf '  %s\n' "${missing[@]}" | sort >&2
+  echo "Check the manifest: column 2 must be the run name (filename without extension), and the manifest must have no header row." >&2
   echo "Uncompressed .d folders are not accepted; archive each run as <run>.d.zip (or .d.tar/.d.tar.gz/.d.tgz)." >&2
   exit 4
 fi
