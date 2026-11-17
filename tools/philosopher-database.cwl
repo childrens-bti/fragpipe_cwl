@@ -12,7 +12,7 @@ baseCommand: [bash, /opt/scripts/philosopher-database.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1"
   InitialWorkDirRequirement:
     listing:
       - $(inputs.query_fasta)

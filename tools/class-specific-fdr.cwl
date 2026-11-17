@@ -20,7 +20,7 @@ baseCommand: [python3, /opt/scripts/class-specific-fdr.py]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1"
 
 inputs:
   results_dir:
