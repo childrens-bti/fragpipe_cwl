@@ -18,9 +18,22 @@ global FDR and dropped decoys by the time psm.tsv is written, so the class
 calculation has to happen upstream of it. It needs percolator.keep-tsv-files=true
 in the workflow.
 
+The custom class is defined in one of two ways:
+  --class_fasta FASTA   every entry of the custom FASTA (the search's query_fasta)
+                        is in the class, whatever its header looks like. Use this
+                        when custom headers share no common label, e.g. a mix of
+                        variant, splice-junction and fusion entries.
+  --class_prefix STR    every protein whose accession contains STR.
+
+A PSM is assigned to the custom class only if EVERY protein it maps to is a
+custom entry. A peptide that also maps to a canonical protein is explained by
+the reference proteome, so it is not evidence for the custom entry and is
+scored with the canonical class. Decoys are classified the same way, after
+removing the decoy prefix.
+
 Usage:
-  class-specific-fdr.py --results_dir DIR --class_prefix tr|TEJ
-                        [--fdr 0.01] [--out_basename NAME]
+  class-specific-fdr.py --results_dir DIR (--class_fasta FASTA | --class_prefix STR)
+                        [--decoy_prefix rev_] [--fdr 0.01] [--out_basename NAME]
 """
 import argparse
 import csv
@@ -31,7 +44,8 @@ import sys
 
 def read_psms(path, is_decoy):
     """Percolator PSM table: PSMId, score, q-value, posterior_error_prob,
-    peptide, proteinIds."""
+    peptide, proteinIds. proteinIds is one column holding every protein the
+    peptide maps to, joined by ';' (with a trailing ';')."""
     out = []
     with open(path) as fh:
         r = csv.DictReader(fh, delimiter="\t")
@@ -40,15 +54,29 @@ def read_psms(path, is_decoy):
                 score = float(row["score"])
             except (KeyError, ValueError):
                 continue
+            proteins = [p for p in (row.get("proteinIds") or "").split(";") if p]
             out.append({
                 "PSMId": row.get("PSMId", ""),
                 "score": score,
                 "peptide": row.get("peptide", ""),
-                "proteinIds": row.get("proteinIds", ""),
+                "proteins": proteins,
+                "proteinIds": ";".join(proteins),
                 "pep": row.get("posterior_error_prob", ""),
                 "decoy": is_decoy,
             })
     return out
+
+
+def fasta_ids(path):
+    """Protein IDs as FragPipe reports them: the header up to the first space."""
+    ids = set()
+    with open(path) as fh:
+        for line in fh:
+            if line.startswith(">"):
+                tok = line[1:].split(None, 1)
+                if tok:
+                    ids.add(tok[0])
+    return ids
 
 
 def qvalues(psms):
@@ -78,8 +106,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--results_dir", required=True)
-    ap.add_argument("--class_prefix", required=True,
-                    help="accession prefix identifying the custom class, e.g. 'tr|TEJ'")
+    cls = ap.add_mutually_exclusive_group(required=True)
+    cls.add_argument("--class_fasta",
+                     help="custom FASTA; every entry in it is in the custom class")
+    cls.add_argument("--class_prefix",
+                     help="substring identifying custom accessions, e.g. 'tr|TEJ'")
+    ap.add_argument("--decoy_prefix", default="rev_",
+                    help="decoy tag (database.decoy-tag in the workflow)")
     ap.add_argument("--fdr", type=float, default=0.01)
     ap.add_argument("--out_basename", default="class_fdr")
     a = ap.parse_args()
@@ -101,17 +134,43 @@ def main():
         psms += read_psms(f, True)
     print("PSMs read: %d (%d decoy)" % (len(psms), sum(p["decoy"] for p in psms)))
 
-    # A decoy of a custom entry carries the decoy prefix in front of the class
-    # prefix (rev_tr|TEJ...), so test for the class anywhere in proteinIds.
-    custom = [p for p in psms if a.class_prefix in p["proteinIds"]]
-    canon = [p for p in psms if a.class_prefix not in p["proteinIds"]]
+    def strip_decoy(pid):
+        return pid[len(a.decoy_prefix):] if pid.startswith(a.decoy_prefix) else pid
+
+    if a.class_fasta:
+        ids = fasta_ids(a.class_fasta)
+        print("custom class: %d entries in %s" % (len(ids), a.class_fasta))
+        if not ids:
+            sys.exit("ERROR: no FASTA headers found in %s" % a.class_fasta)
+        is_custom = lambda pid: strip_decoy(pid) in ids
+        label = a.class_fasta
+    else:
+        is_custom = lambda pid: a.class_prefix in strip_decoy(pid)
+        label = a.class_prefix
+
+    custom, canon = [], []
+    seen = set()
+    for p in psms:
+        flags = [is_custom(pid) for pid in p["proteins"]]
+        if flags and all(flags):
+            custom.append(p)
+        else:
+            canon.append(p)
+        if any(flags) and not p["decoy"]:
+            seen.update(strip_decoy(pid) for pid, f in zip(p["proteins"], flags) if f)
+    shared = sum(1 for p in canon
+                 if not p["decoy"] and any(is_custom(pid) for pid in p["proteins"]))
     print("  custom class : %d PSMs (%d decoy)"
           % (len(custom), sum(p["decoy"] for p in custom)))
     print("  canonical    : %d PSMs (%d decoy)"
           % (len(canon), sum(p["decoy"] for p in canon)))
+    print("  %d target PSMs map to a custom entry AND a canonical protein; "
+          "scored as canonical" % shared)
+    print("  %d distinct custom entries have at least one target PSM" % len(seen))
     if not custom:
-        print("\nWARNING: no PSMs matched '%s'. Either the search database carried no "
-              "entries of this class, or the prefix is wrong." % a.class_prefix)
+        print("\nWARNING: no PSMs matched the custom class (%s). Either the search "
+              "database carried no such entries, or the class definition does not "
+              "match the protein IDs in the Percolator tables." % label)
 
     rows = []
     for name, group in (("custom", custom), ("canonical", canon)):

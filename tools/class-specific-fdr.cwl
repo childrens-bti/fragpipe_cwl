@@ -29,14 +29,29 @@ inputs:
     inputBinding:
       prefix: --results_dir
 
-  class_prefix:
-    type: string
+  class_fasta:
+    type: File?
     doc: |
-      Accession prefix identifying the custom class, e.g. "tr|TEJ". Decoys carry
-      the decoy prefix in front of it (rev_tr|TEJ...), so the match is a
-      substring test, not a startswith.
+      Custom FASTA (normally the search's query_fasta). Every entry in it is in
+      the custom class, matched on the header up to the first space, so headers
+      need no common label. Give this or class_prefix, not both.
+    inputBinding:
+      prefix: --class_fasta
+
+  class_prefix:
+    type: string?
+    doc: |
+      Substring identifying custom accessions, e.g. "tr|TEJ". Tested after the
+      decoy prefix is removed. Give this or class_fasta, not both.
     inputBinding:
       prefix: --class_prefix
+
+  decoy_prefix:
+    type: string?
+    default: "rev_"
+    doc: Decoy tag, matching database.decoy-tag in the FragPipe workflow
+    inputBinding:
+      prefix: --decoy_prefix
 
   fdr:
     type: float?

@@ -87,12 +87,26 @@ inputs:
     default: null
     doc: Optional control-run combined peptide table used to remove overlapping peptides
 
+  run_class_fdr:
+    type: boolean
+    default: false
+    doc: |
+      If true, compute a class-specific FDR for every entry of query_fasta, so
+      single-peptide custom entries are not discarded by the global protein-level
+      FDR. Works whatever the custom headers look like. Requires
+      percolator.keep-tsv-files=true in workflow_file.
+
   class_prefix:
     type: string?
     doc: |
-      Accession prefix identifying custom database entries, e.g. "tr|TEJ". When
-      set, a class-specific FDR is computed so single-peptide custom entries are
-      not discarded by the global protein-level FDR. Leave unset to skip.
+      Alternative to run_class_fdr: define the custom class as accessions
+      containing this substring, e.g. "tr|TEJ". Setting it also turns the step
+      on. If both are set, class_prefix is used.
+
+  class_fdr_threshold:
+    type: float
+    default: 0.01
+    doc: FDR threshold applied within each class by the class-specific FDR step
 
   run_pdv:
     type: boolean
@@ -288,9 +302,14 @@ steps:
   #  global protein-level FDR discards; this scores the class against its own decoys)
   class_fdr:
     run: tools/class-specific-fdr.cwl
-    when: $(inputs.class_prefix !== null)
+    when: $(inputs.run_class_fdr || inputs.class_prefix !== null)
     in:
+      run_class_fdr: run_class_fdr
       class_prefix: class_prefix
+      class_fasta:
+        source: query_fasta
+        valueFrom: "$(inputs.class_prefix === null ? self : null)"
+      fdr: class_fdr_threshold
       results_dir: run_fragpipe/results_dir
       output_basename: output_basename
     out:
