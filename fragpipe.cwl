@@ -24,6 +24,10 @@ inputs:
   uniprot_canonical_fasta:
     type: File
     doc: UniProt canonical FASTA file (e.g., data/reference/UP000005640_9606.fasta.gz)
+    sbg:suggestedValue:
+      class: File
+      path: 6a322ff1b729272b1d1bbea9
+      name: UP000005640_9606_07242024.fasta
     
   # FragPipe inputs
   workflow_file:
@@ -31,7 +35,7 @@ inputs:
     doc: FragPipe workflow configuration file (e.g., data/HOPEproteome_TMT11workflow.workflow)
     
   group_by_experiment:
-    type: boolean
+    type: boolean?
     default: false
     doc: |
       Group every fraction of a plex under one FragPipe experiment, taken from the
@@ -57,14 +61,14 @@ inputs:
     doc: Type of input files - must be one of "raw", "mzml_gz", "mzml", or "d"
 
   skip_canonical_filter:
-    type: boolean
+    type: boolean?
     default: false
     doc: |
       If true, skip removing canonical proteins of genes named in query_fasta headers,
       so wild-type sequences stay in the database and compete with query sequences.
 
   run_subset:
-    type: boolean
+    type: boolean?
     default: false
     doc: If true, only process files matching subset_pattern
 
@@ -88,7 +92,7 @@ inputs:
     doc: Optional control-run combined peptide table used to remove overlapping peptides
 
   run_class_fdr:
-    type: boolean
+    type: boolean?
     default: false
     doc: |
       If true, compute a class-specific FDR for every entry of query_fasta, so
@@ -104,19 +108,19 @@ inputs:
       on. If both are set, class_prefix is used.
 
   class_fdr_threshold:
-    type: float
+    type: float?
     default: 0.01
     doc: FDR threshold applied within each class by the class-specific FDR step
 
   run_pdv:
-    type: boolean
+    type: boolean?
     default: false
     doc: |
       If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv.
       Ignored for input_type "d" (PDV is skipped for Bruker .d runs).
 
   num_cores:
-    type: int
+    type: int?
     default: 8
     doc: Number of parallel processes for msconvert .raw file conversion
 
