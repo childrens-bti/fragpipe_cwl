@@ -15,7 +15,8 @@
 # PDC000180 is MS3-based TMT: reporter ions are in MS3 scans, so its workflow sets
 # tmtintegrator.quant_level=3. Its MS2 scans are ion trap (lowest m/z ~350) and carry
 # no reporter region. Running it at quant_level=2 completes normally but leaves every
-# reporter channel empty -- see the workflow file description.
+# reporter channel empty -- see the workflow file description. Because MS2 is ion
+# trap, the workflow also uses a 0.7 Da fragment tolerance (as in the published search).
 
 group_by_experiment: true
 

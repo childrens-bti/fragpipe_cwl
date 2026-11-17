@@ -366,6 +366,12 @@ but reporter channels are empty and the TMT report collapses. PDC000180 is
 MS3-based and its workflow file sets `quant_level=3`; HOPE is MS2-based and stays
 at 2. Do not copy one cohort's workflow file to the other without checking.
 
+The MS2 analyser also sets the fragment tolerance. HOPE's MS2 is Orbitrap HCD
+(50K), so `msfragger.fragment_mass_tolerance=20` ppm. PDC000180's MS2 is ion-trap
+CID, so its workflow uses 0.7 Da (`fragment_mass_units=0`), as in the published
+search (Petralia et al., Cell 2020). A ppm tolerance on ion-trap MS2 also fails
+silently, with far fewer identifications.
+
 The workflow files themselves are plex-count agnostic — nothing in them changes
 between a joint and a per-file run.
 
