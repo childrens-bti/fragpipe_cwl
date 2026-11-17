@@ -45,6 +45,7 @@ inputs:
       which is the historical behaviour. TMT workflows only: with LFQ/DIA/HLA it
       merges per-run intensities into per-folder ones. Requires the
       <input_source_dir>/<plex>/<file> layout; staging exits 5 otherwise.
+      Default: false.
   manifest_file:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
@@ -66,11 +67,14 @@ inputs:
     doc: |
       If true, skip removing canonical proteins of genes named in query_fasta headers,
       so wild-type sequences stay in the database and compete with query sequences.
+      Default: false.
 
   run_subset:
     type: boolean?
     default: false
-    doc: If true, only process files matching subset_pattern
+    doc: |
+      If true, only process files matching subset_pattern.
+      Default: false.
 
   subset_pattern:
     type: string?
@@ -81,6 +85,7 @@ inputs:
       Works for all input types: .raw, .mzML.gz, .mzML and .d archives.
       All input types should be organized in the same experiment folder structure.
       Not required when run_subset is false.
+      Default: "" (empty).
 
   output_basename:
     type: string
@@ -89,7 +94,9 @@ inputs:
   control_combined_peptide:
     type: File?
     default: null
-    doc: Optional control-run combined peptide table used to remove overlapping peptides
+    doc: |
+      Optional control-run combined peptide table used to remove overlapping peptides.
+      Default: none (control filtering skipped).
 
   run_class_fdr:
     type: boolean?
@@ -99,6 +106,7 @@ inputs:
       single-peptide custom entries are not discarded by the global protein-level
       FDR. Works whatever the custom headers look like. Requires
       percolator.keep-tsv-files=true in workflow_file.
+      Default: false.
 
   class_prefix:
     type: string?
@@ -106,11 +114,14 @@ inputs:
       Alternative to run_class_fdr: define the custom class as accessions
       containing this substring, e.g. "tr|TEJ". Setting it also turns the step
       on. If both are set, class_prefix is used.
+      Default: none.
 
   class_fdr_threshold:
     type: float?
     default: 0.01
-    doc: FDR threshold applied within each class by the class-specific FDR step
+    doc: |
+      FDR threshold applied within each class by the class-specific FDR step.
+      Default: 0.01.
 
   run_pdv:
     type: boolean?
@@ -118,11 +129,14 @@ inputs:
     doc: |
       If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv.
       Ignored for input_type "d" (PDV is skipped for Bruker .d runs).
+      Default: false.
 
   num_cores:
     type: int?
     default: 8
-    doc: Number of parallel processes for msconvert .raw file conversion
+    doc: |
+      Number of parallel processes for msconvert .raw file conversion.
+      Default: 8.
 
 outputs:
   results_dir:
