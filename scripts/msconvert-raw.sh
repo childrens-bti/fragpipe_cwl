@@ -133,7 +133,7 @@ export -f process_file
 FILES_TO_PROCESS=()
 MANIFEST_RUNS=0
 missing=()
-while IFS=$'\t' read -r path_ignored exp_name rest; do
+while IFS=$'\t' read -r path_ignored exp_name rest || [[ -n "$exp_name" ]]; do
   exp_name="${exp_name%$'\r'}"
   [[ -z "$exp_name" ]] && continue
   MANIFEST_RUNS=$((MANIFEST_RUNS + 1))
@@ -161,6 +161,7 @@ fi
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "ERROR: No matching .raw under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
   printf '  %s\n' "${missing[@]}" >&2
+  echo "Check the manifest: column 2 must be the run name (filename without extension), and the manifest must have no header row." >&2
   exit 4
 fi
 

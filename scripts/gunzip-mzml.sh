@@ -108,8 +108,8 @@ fi
 found=()
 missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
-  # Find the first match under SOURCE_DIR (top-level or nested)
-  f=$(find "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
+  # Find the first match at any depth (flat layout or experiment subfolders).
+  f=$(find -L "$SOURCE_DIR" -mindepth 1 -type f -name "$m.mzML.gz" | head -n 1)
   if [[ -n "$f" ]]; then
     found+=("$f")
   else
@@ -121,6 +121,7 @@ done
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "ERROR: No matching mzML.gz under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
   printf '  %s\n' "${missing[@]}" >&2
+  echo "Check the manifest: column 2 must be the run name (filename without extension), and the manifest must have no header row." >&2
   exit 4
 fi
 

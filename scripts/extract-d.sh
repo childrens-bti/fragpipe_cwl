@@ -121,7 +121,7 @@ found=()
 found_run=()
 missing=()
 for m in "${!DATA_TYPE[@]}"; do
-  matches=$(find "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
+  matches=$(find -L "$SOURCE_DIR" -type f \( -name "$m.d.zip" -o -name "$m.d.tar" -o -name "$m.d.tar.gz" -o -name "$m.d.tgz" \) | sort)
   d=$(head -n 1 <<< "$matches")
   if [[ $(grep -c . <<< "$matches") -gt 1 ]]; then
     echo "WARNING: Multiple archives found for $m; using $d and ignoring:" >&2
@@ -139,6 +139,7 @@ done
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "ERROR: No matching .d.zip/.d.tar/.d.tar.gz/.d.tgz archive under $SOURCE_DIR for ${#missing[@]} manifest run(s):" >&2
   printf '  %s\n' "${missing[@]}" | sort >&2
+  echo "Check the manifest: column 2 must be the run name (filename without extension), and the manifest must have no header row." >&2
   echo "Uncompressed .d folders are not accepted; archive each run as <run>.d.zip (or .d.tar/.d.tar.gz/.d.tgz)." >&2
   exit 4
 fi

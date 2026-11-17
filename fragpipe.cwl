@@ -87,6 +87,13 @@ inputs:
     default: null
     doc: Optional control-run combined peptide table used to remove overlapping peptides
 
+  class_prefix:
+    type: string?
+    doc: |
+      Accession prefix identifying custom database entries, e.g. "tr|TEJ". When
+      set, a class-specific FDR is computed so single-peptide custom entries are
+      not discarded by the global protein-level FDR. Leave unset to skip.
+
   run_pdv:
     type: boolean
     default: false
@@ -124,6 +131,11 @@ outputs:
     type: File?
     outputSource: filter_control_peptides/control_overlap_summary
     doc: Summary statistics for control-overlap filtering
+
+  class_fdr_psms:
+    type: File?
+    outputSource: class_fdr/class_fdr_psms
+    doc: PSMs passing their own class's FDR, with class_qvalue
 
   pdv_spectra_dir:
     type: Directory?
@@ -270,6 +282,19 @@ steps:
       output_basename: output_basename
     out:
       - pdv_spectra_dir
+
+  # Step 7: Optional class-specific FDR for custom database entries
+  # (a translated junction/variant is usually a single-peptide protein, which a
+  #  global protein-level FDR discards; this scores the class against its own decoys)
+  class_fdr:
+    run: tools/class-specific-fdr.cwl
+    when: $(inputs.class_prefix !== null)
+    in:
+      class_prefix: class_prefix
+      results_dir: run_fragpipe/results_dir
+      output_basename: output_basename
+    out:
+      - class_fdr_psms
 
 
 $namespaces:
