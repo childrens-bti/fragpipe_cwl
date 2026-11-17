@@ -55,7 +55,7 @@ inputs:
 
   fdr:
     type: float?
-    default: 0.01
+    default: 0.05
     doc: FDR threshold applied within each class
     inputBinding:
       prefix: --fdr

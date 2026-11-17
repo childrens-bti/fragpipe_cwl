@@ -118,10 +118,12 @@ inputs:
 
   class_fdr_threshold:
     type: float?
-    default: 0.01
+    default: 0.05
     doc: |
       FDR threshold applied within each class by the class-specific FDR step.
-      Default: 0.01.
+      With n target PSMs in a class the lowest achievable q-value is 1/n, so a
+      class needs at least 20 target PSMs to pass anything at 0.05 (100 at 0.01).
+      Default: 0.05.
 
   run_pdv:
     type: boolean?
