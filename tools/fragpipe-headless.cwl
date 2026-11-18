@@ -12,7 +12,7 @@ baseCommand: [bash, /opt/scripts/fragpipe-headless.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1"
   InplaceUpdateRequirement:
     inplaceUpdate: true
   EnvVarRequirement:

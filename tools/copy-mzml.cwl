@@ -11,7 +11,7 @@ baseCommand: [bash, /opt/scripts/copy-mzml.sh]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1"
   InitialWorkDirRequirement:
     listing:
       - writable: true
@@ -51,6 +51,20 @@ inputs:
     doc: Manifest file listing mzML base names to process (required)
     inputBinding:
       position: 4
+
+  group_by_experiment:
+    type: string
+    default: "false"
+    doc: |
+      Literal "true"/"false". When "true", the FragPipe manifest's experiment
+      column (column 2) is set to the staged plex directory, so every fraction of
+      a plex shares one experiment -- required for a joint TMT search. When
+      "false" (default) each file gets its own experiment, preserving the
+      historical behaviour.
+      TMT workflows only. Requires <input_source_dir>/<plex>/<file> layout;
+      exits 5 if any file is directly in input_source_dir or deeper.
+    inputBinding:
+      position: 5
 
 outputs:
   input_directory:

@@ -29,6 +29,15 @@ FASTA_ABS="$(cd "$(dirname "$FILTERED_FASTA")" && pwd)/$(basename "$FILTERED_FAS
 WORKFLOW_MODIFIED="$(pwd)/workflow_modified.workflow"
 awk -v db="database.db-path=$FASTA_ABS" 'BEGIN{done=0} /^database\.db-path=/{if(!done){print db; done=1}; next} {print} END{if(!done) print db}' "$WORKFLOW_FILE" > "$WORKFLOW_MODIFIED"
 
+# Shared experiments (group_by_experiment) only make sense for TMT. For LFQ/DIA/HLA
+# they merge per-run intensities into per-folder ones without any error.
+if ! grep -q '^tmtintegrator\.run-tmtintegrator=true' "$WORKFLOW_FILE" \
+   && awk -F'\t' '$2 != "" { n[$2]++ } END { for (e in n) if (n[e] > 1) exit 0; exit 1 }' "$MANIFEST_FILE"; then
+  echo "WARNING: manifest has experiments shared by several runs (group_by_experiment?)," >&2
+  echo "  but the workflow does not run TMT-Integrator. Grouping is intended for TMT only;" >&2
+  echo "  with LFQ/DIA/HLA it merges per-run quantities into per-folder ones." >&2
+fi
+
 # Run FragPipe in headless mode (FragPipe writes its own log file in the workdir)
 RUN_LOG="$(pwd)/fragpipe-headless.runtime.log"
 set +e

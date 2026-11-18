@@ -2,13 +2,17 @@
 set -euo pipefail
 
 
-# Usage: copy-mzml.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE>
+# Usage: copy-mzml.sh <SOURCE_DIR> [RUN_SUBSET] [SUBSET_PATTERN] <MANIFEST_FILE> [GROUP_BY_EXPERIMENT]
 # Copy uncompressed mzML files and perform other setup steps (annotation, manifest)
 SOURCE_DIR="$1"
 RUN_SUBSET="${2:-false}"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
+GROUP_BY_EXPERIMENT="${5:-false}"
 OUT_DIR="$(pwd)/input_files"
+# shellcheck source=staging-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/staging-lib.sh"
+
 
 # Ensure output path is a directory
 if [ -f "$OUT_DIR" ]; then
@@ -102,12 +106,13 @@ if [[ ${#MANIFEST_BASENAMES[@]} -eq 0 ]]; then
 fi
 # Process files found either directly under SOURCE_DIR or in experiment subfolders
 # For each manifest base name, find the first matching file anywhere under SOURCE_DIR
+found=()
 missing=()
 for m in "${MANIFEST_BASENAMES[@]}"; do
   # Find the first match under SOURCE_DIR (top-level or nested)
   f=$(find -L "$SOURCE_DIR" -type f -name "$m.mzML" | head -n 1)
   if [[ -n "$f" ]]; then
-    process_file "$f"
+    found+=("$f")
   else
     missing+=("$m")
   fi
@@ -121,13 +126,19 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   exit 4
 fi
 
+check_plex_layout "$SOURCE_DIR" "${found[@]}"
+
+for f in "${found[@]}"; do
+  process_file "$f"
+done
+
 # Create input_files.txt (all mzML paths)
 find "$OUT_DIR" -type f -name "*.mzML" | sort > input_files.txt
 
 # input_manifest.fp-manifest: FragPipe format (path, basename without .mzML, empty, DDA)
 while IFS= read -r filepath; do
   basename=$(basename "$filepath" .mzML)
-  echo -e "${filepath}\t${basename}\t\tDDA"
+  echo -e "${filepath}\t$(manifest_experiment "$filepath" "$basename")\t\tDDA"
 done < input_files.txt > input_manifest.fp-manifest
 
 if [[ ! -s input_files.txt ]]; then

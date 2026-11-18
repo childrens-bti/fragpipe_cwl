@@ -9,12 +9,16 @@ echo "Using per-worker Wine isolation (current uid: $CURRENT_UID, owner uid: $WI
 export WINEARCH=win64
 export WINEDEBUG=-all
 
-# Usage: msconvert-raw.sh <SOURCE_DIR> <RUN_SUBSET> <SUBSET_PATTERN> <MANIFEST_FILE> [NUM_CORES]
+# Usage: msconvert-raw.sh <SOURCE_DIR> <RUN_SUBSET> <SUBSET_PATTERN> <MANIFEST_FILE> [NUM_CORES] [GROUP_BY_EXPERIMENT]
 SOURCE_DIR="$1"
 RUN_SUBSET="$2"
 SUBSET_PATTERN="$3"
 MANIFEST_FILE="$4"
+# shellcheck source=staging-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/staging-lib.sh"
+
 NUM_CORES="${5:-8}"  # Fallback when 5th arg is not provided
+GROUP_BY_EXPERIMENT="${6:-false}"
 OUT_DIR="$(pwd)/input_files"
 
 # Ensure output path is a directory
@@ -161,6 +165,8 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   exit 4
 fi
 
+check_plex_layout "$SOURCE_DIR_ABS" "${FILES_TO_PROCESS[@]}"
+
 # Process files in parallel using GNU parallel or xargs
 if command -v parallel &> /dev/null; then
   echo "Using GNU parallel with $NUM_CORES jobs"
@@ -178,7 +184,7 @@ find "$OUT_DIR" -type f \( -name "*.mzML" -o -name "*.mzml" \) | sort > input_fi
 while IFS= read -r mzml_file; do
   basename_no_ext=$(basename "$mzml_file" .mzML)
   basename_no_ext=$(basename "$basename_no_ext" .mzml)
-  echo -e "${mzml_file}\t${basename_no_ext}\t\tDDA" >> input_manifest.fp-manifest
+  echo -e "${mzml_file}\t$(manifest_experiment "$mzml_file" "$basename_no_ext")\t\tDDA" >> input_manifest.fp-manifest
 done < input_files.txt
 
 NUM_FILES=$(wc -l < input_files.txt)

@@ -313,7 +313,67 @@ sbpack cavatica childrens-bti/impact-trial-cwl/fragpipe_cwl fragpipe.cwl
 
 Then configure and run via the Cavatica web interface.
 
-`params/` is gitignored (params files hold project-specific paths), so the files named in the examples above are local only. Use the parameter examples in [Step 3](#step-3-prepare-input-parameters) as a starting point.
+`params/` is gitignored (params files hold project-specific paths), so the files named in the examples above are local only. The exceptions are the two tracked presets `params/tmt-joint-hope.yml` and `params/tmt-joint-cptac.yml` (see [Joint TMT Search Across Plexes](#joint-tmt-search-across-plexes)), which leave environment-specific paths as commented placeholders. Use the parameter examples in [Step 3](#step-3-prepare-input-parameters) as a starting point.
+
+## Joint TMT Search Across Plexes
+
+By default every input file is given its own FragPipe *experiment*, so each
+fraction is searched as an independent unit. A **joint** TMT search instead puts
+every fraction of a plex under one experiment, which shares protein inference and
+FDR estimation across plexes and lets TMT-Integrator emit a single cross-plex
+abundance report.
+
+Set `group_by_experiment: true`:
+
+```yaml
+group_by_experiment: true
+```
+
+The experiment is taken from the **staged plex directory**, so `input_source_dir`
+must be organised one sub-directory per plex, each holding that plex's spectra and
+its `annotation.txt`:
+
+```
+<input_source_dir>/
+├── 01/   ...mzML   annotation.txt
+├── 02/   ...mzML   annotation.txt
+└── 23/   ...mzML   annotation.txt
+```
+
+Staging enforces this: with `group_by_experiment: true`, any file sitting directly
+in `input_source_dir` or more than one level deep (e.g. `<cohort>/<plex>/`) fails
+the run with exit code 5, because either layout would merge every plex into one
+experiment.
+
+`group_by_experiment` is for **TMT workflows only**. With LFQ, DIA or HLA
+workflows it merges per-run intensities into per-folder ones; FragPipe headless
+prints a warning if experiments are shared but the workflow does not run
+TMT-Integrator.
+
+Ready-made parameter files are in `params/`:
+
+| preset | cohort | plexes | reporter ions |
+|---|---|---|---|
+| `params/tmt-joint-hope.yml` | HOPE (PNNL) | 10 | MS2 |
+| `params/tmt-joint-cptac.yml` | PDC000180 (CBTTC/HMS) | 23 | **MS3** |
+
+### MS2 vs MS3 TMT
+
+Whether reporter ions are read from MS2 or MS3 scans is a property of the
+**workflow file**, not of this CWL — `tmtintegrator.quant_level` is 2 or 3.
+Getting it wrong fails *silently*: the run completes with every stage exiting 0,
+but reporter channels are empty and the TMT report collapses. PDC000180 is
+MS3-based and its workflow file sets `quant_level=3`; HOPE is MS2-based and stays
+at 2. Do not copy one cohort's workflow file to the other without checking.
+
+The MS2 analyser also sets the fragment tolerance. HOPE's MS2 is Orbitrap HCD
+(50K), so `msfragger.fragment_mass_tolerance=20` ppm. PDC000180's MS2 is ion-trap
+CID, so its workflow uses 0.7 Da (`fragment_mass_units=0`), as in the published
+search (Petralia et al., Cell 2020). A ppm tolerance on ion-trap MS2 also fails
+silently, with far fewer identifications.
+
+The workflow files themselves are plex-count agnostic — nothing in them changes
+between a joint and a per-file run.
 
 ## Manifest File Specification
 
@@ -414,7 +474,7 @@ Auto-generate new manifest with full local paths
 
 ## Docker Image
 
-**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0` (the tag referenced by every FragPipe tool in `tools/*.cwl`)
+**Image:** `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1` (the tag referenced by every FragPipe tool in `tools/*.cwl`)
 
 **Image tags follow releases:** each fragpipe_cwl release pins its own image tag, named after the release (e.g. `v1.2.0`), because `scripts/` is built into the image. A release's tag is never overwritten. When `scripts/` or the `Dockerfile` changes, build and push a new tag and update `dockerPull` in `tools/*.cwl` to match. The MSConvert image follows the same rule (see below). Releases before v1.2.0 use `fragpipe_v22` and `pwiz-msconvert:latest`, which are kept at their pre-v1.2.0 images.
 
@@ -432,33 +492,33 @@ Auto-generate new manifest with full local paths
 - **MSFragger native readers** (`ext/` folder from the licensed MSFragger 4.1 zip, including `ext/bruker/libtimsdata-2-21-0-4.so`): place at `tools/ext/` before building; required for Bruker `.d` input. `tools/ext/` is gitignored.
 
 **For .raw file conversion**, you also need:
-- **MSConvert Docker Image**: `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0`, built from `Dockerfile.pwiz`
+- **MSConvert Docker Image**: `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.1`, built from `Dockerfile.pwiz`
   - Based on `proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses` (ProteoWizard msconvert under wine)
   - Contains its own copy of `scripts/msconvert-raw.sh` at `/opt/scripts/`, so it needs a new release tag whenever that script changes
   - Used only for the `msconvert-raw.cwl` step
 
 **Building:**
 ```bash
-docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0 .
-docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0
+docker build -t pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1 .
+docker push pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1
 
-docker build -f Dockerfile.pwiz -t pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0 .
-docker push pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0
+docker build -f Dockerfile.pwiz -t pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.1 .
+docker push pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.1
 ```
 
 ## Requirements
 
 - **CWL Runner**: cwltool 3.1+ (for CWL v1.2 support including `InplaceUpdateRequirement`)
 - **Docker**: For containerized execution
-  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0`
-  - MSConvert image (for .raw files): `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0`
+  - Main FragPipe image: `pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1`
+  - MSConvert image (for .raw files): `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.1`
 - **SBFS**: Seven Bridges File System (for local workflow with Cavatica mounts)
   - Requires `/etc/fuse.conf` with `user_allow_other` enabled
   - Requires Cavatica credentials configured
 - **Cavatica Account**: For accessing project data and platform execution
 
 **Note on .raw file conversion:**
-- When processing .raw files, the `convert_raw` step uses `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.0` (built from `Dockerfile.pwiz`). It is a private registry image, so run `docker login pgc-images.sbgenomics.com` before running locally
+- When processing .raw files, the `convert_raw` step uses `pgc-images.sbgenomics.com/childrens-bti/pwiz-msconvert:v1.2.1` (built from `Dockerfile.pwiz`). It is a private registry image, so run `docker login pgc-images.sbgenomics.com` before running locally
 - This image is ~4GB and contains ProteoWizard msconvert with wine
 - First-time conversion will take longer due to image download
 - The image is built on ProteoWizard's vendor-library image; using it means you agree to the Thermo Fisher raw file reading library licenses

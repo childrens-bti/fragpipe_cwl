@@ -12,7 +12,7 @@ baseCommand: [python3, /opt/scripts/filter-control-peptides.py]
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.0"
+    dockerPull: "pgc-images.sbgenomics.com/childrens-bti/fragpipe_cwl:v1.2.1"
   InitialWorkDirRequirement:
     listing:
       - $(inputs.input_combined_peptide)

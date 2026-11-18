@@ -6,8 +6,8 @@ RUN useradd -m -u 1000 wineuser || true \
     && chmod -R 777 /wineprefix64
 
 # Copy msconvert script
-COPY scripts/msconvert-raw.sh /opt/scripts/msconvert-raw.sh
-RUN chmod a+rx /opt/scripts/msconvert-raw.sh
+COPY scripts/msconvert-raw.sh scripts/staging-lib.sh /opt/scripts/
+RUN chmod a+rx /opt/scripts/msconvert-raw.sh /opt/scripts/staging-lib.sh
 
 # Keep wine environment variables
 ENV WINEPREFIX=/wineprefix64

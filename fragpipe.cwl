@@ -24,12 +24,28 @@ inputs:
   uniprot_canonical_fasta:
     type: File
     doc: UniProt canonical FASTA file (e.g., data/reference/UP000005640_9606.fasta.gz)
+    sbg:suggestedValue:
+      class: File
+      path: 6a322ff1b729272b1d1bbea9
+      name: UP000005640_9606_07242024.fasta
     
   # FragPipe inputs
   workflow_file:
     type: File
     doc: FragPipe workflow configuration file (e.g., data/HOPEproteome_TMT11workflow.workflow)
     
+  group_by_experiment:
+    type: boolean?
+    default: false
+    doc: |
+      Group every fraction of a plex under one FragPipe experiment, taken from the
+      staged plex directory name. Required for a joint TMT search across plexes,
+      which shares protein inference and FDR estimation and lets TMT-Integrator
+      emit a single cross-plex report. Default false keeps one experiment per file,
+      which is the historical behaviour. TMT workflows only: with LFQ/DIA/HLA it
+      merges per-run intensities into per-folder ones. Requires the
+      <input_source_dir>/<plex>/<file> layout; staging exits 5 otherwise.
+      Default: false.
   manifest_file:
     type: File
     doc: FragPipe manifest file specifying mzML file paths (e.g., data/HOPEproteome_TMT11.fp-manifest)
@@ -46,16 +62,19 @@ inputs:
     doc: Type of input files - must be one of "raw", "mzml_gz", "mzml", or "d"
 
   skip_canonical_filter:
-    type: boolean
+    type: boolean?
     default: false
     doc: |
       If true, skip removing canonical proteins of genes named in query_fasta headers,
       so wild-type sequences stay in the database and compete with query sequences.
+      Default: false.
 
   run_subset:
-    type: boolean
+    type: boolean?
     default: false
-    doc: If true, only process files matching subset_pattern
+    doc: |
+      If true, only process files matching subset_pattern.
+      Default: false.
 
   subset_pattern:
     type: string?
@@ -66,6 +85,7 @@ inputs:
       Works for all input types: .raw, .mzML.gz, .mzML and .d archives.
       All input types should be organized in the same experiment folder structure.
       Not required when run_subset is false.
+      Default: "" (empty).
 
   output_basename:
     type: string
@@ -74,19 +94,51 @@ inputs:
   control_combined_peptide:
     type: File?
     default: null
-    doc: Optional control-run combined peptide table used to remove overlapping peptides
+    doc: |
+      Optional control-run combined peptide table used to remove overlapping peptides.
+      Default: none (control filtering skipped).
+
+  run_class_fdr:
+    type: boolean?
+    default: false
+    doc: |
+      If true, compute a class-specific FDR for every entry of query_fasta, so
+      single-peptide custom entries are not discarded by the global protein-level
+      FDR. Works whatever the custom headers look like. Requires
+      percolator.keep-tsv-files=true in workflow_file.
+      Default: false.
+
+  class_prefix:
+    type: string?
+    doc: |
+      Alternative to run_class_fdr: define the custom class as accessions
+      containing this substring, e.g. "tr|TEJ". Setting it also turns the step
+      on. If both are set, class_prefix is used.
+      Default: none.
+
+  class_fdr_threshold:
+    type: float?
+    default: 0.05
+    doc: |
+      FDR threshold applied within each class by the class-specific FDR step.
+      With n target PSMs in a class the lowest achievable q-value is 1/n, so a
+      class needs at least 20 target PSMs to pass anything at 0.05 (100 at 0.01).
+      Default: 0.05.
 
   run_pdv:
-    type: boolean
+    type: boolean?
     default: false
     doc: |
       If true, run PDV batch plotting on peptides from *_combined_peptide_control_filtered.tsv.
       Ignored for input_type "d" (PDV is skipped for Bruker .d runs).
+      Default: false.
 
   num_cores:
-    type: int
+    type: int?
     default: 8
-    doc: Number of parallel processes for msconvert .raw file conversion
+    doc: |
+      Number of parallel processes for msconvert .raw file conversion.
+      Default: 8.
 
 outputs:
   results_dir:
@@ -114,6 +166,11 @@ outputs:
     outputSource: filter_control_peptides/control_overlap_summary
     doc: Summary statistics for control-overlap filtering
 
+  class_fdr_psms:
+    type: File?
+    outputSource: class_fdr/class_fdr_psms
+    doc: PSMs passing their own class's FDR, with class_qvalue
+
   pdv_spectra_dir:
     type: Directory?
     outputSource: run_pdv_plots/pdv_spectra_dir
@@ -131,6 +188,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
       num_cores: num_cores
     out: [input_directory, input_file_list, input_manifest]
@@ -146,6 +206,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
     out: [input_directory, input_file_list, input_manifest]
 
@@ -160,6 +223,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
     out: [input_directory, input_file_list, input_manifest]
 
@@ -174,6 +240,9 @@ steps:
         source: run_subset
         valueFrom: '$(self ? "true" : "false")'
       subset_pattern: subset_pattern
+      group_by_experiment:
+        source: group_by_experiment
+        valueFrom: '$(self ? "true" : "false")'
       manifest_file: manifest_file
     out: [input_directory, input_file_list, input_manifest]
 
@@ -247,6 +316,24 @@ steps:
       output_basename: output_basename
     out:
       - pdv_spectra_dir
+
+  # Step 7: Optional class-specific FDR for custom database entries
+  # (a translated junction/variant is usually a single-peptide protein, which a
+  #  global protein-level FDR discards; this scores the class against its own decoys)
+  class_fdr:
+    run: tools/class-specific-fdr.cwl
+    when: $(inputs.run_class_fdr || inputs.class_prefix !== null)
+    in:
+      run_class_fdr: run_class_fdr
+      class_prefix: class_prefix
+      class_fasta:
+        source: query_fasta
+        valueFrom: "$(inputs.class_prefix === null ? self : null)"
+      fdr: class_fdr_threshold
+      results_dir: run_fragpipe/results_dir
+      output_basename: output_basename
+    out:
+      - class_fdr_psms
 
 
 $namespaces:
